@@ -249,10 +249,10 @@ namespace TPC
                         {
                             bool willClimb = false;
                             ClimbOver(hit, ref willClimb,ClimbCheckType.walk_up);
-
                             if (!willClimb)
                             {
                                 ClimbOver(hit, ref willClimb, ClimbCheckType.climb_up);
+                                print("climb up");
                                 if (willClimb)
                                 {
                                     obstacleForward = true;
@@ -311,7 +311,7 @@ namespace TPC
                     break;
             }
             RaycastHit climbHit;
-
+            
             Vector3 wallDirection = -hit.normal * targetDistance;
             Debug.DrawRay(climbCheckOrigin, wallDirection, Color.yellow);
             if(Physics.Raycast(climbCheckOrigin,wallDirection,out climbHit, 1.2f, ignoreLayers))
@@ -332,20 +332,24 @@ namespace TPC
                         origin2 += Vector3.up * Statics.climbMaxHeight;
                         break;
                 }
-                origin2 += wallDirection * 0.2f;  
-                Debug.DrawRay(origin2, -Vector3.up, Color.yellow);
-                print("climb hit");
-                if(Physics.Raycast(origin2,-Vector3.up,out climbHit, 1, ignoreLayers))
+                //origin2 += wallDirection;
+                Debug.DrawRay(origin2, -Vector3.up, Color.white);
+
+                if(Physics.Raycast(origin2,-Vector3.up,out climbHit, 1.2f, ignoreLayers))
                 {
-                    print("climb hit triple"); 
+
                     float diff = climbHit.point.y - transform.position.y;
                     if (Mathf.Abs(diff) > 0.4f)
                     {
+                        print(diff);
                         vaulting = true;
                         targetVaultPosition = climbHit.point;
                         obstacleForward = false;
                         willClimb = true;
-
+                        if (diff < 1.5f)                        // addition we made
+                        {                                       // addition we made
+                            ct = ClimbCheckType.walk_up;        // addition we made
+                        }                                       // addition we made
                         switch (ct)
                         {
                             case ClimbCheckType.walk_up:
