@@ -11,7 +11,6 @@ namespace TPC
         [HideInInspector]
         public CameraManager camManager;
         HandleMovement_Player hMove;
-
         float horizontal;
         float vertical;
 
@@ -27,7 +26,7 @@ namespace TPC
             camManager = CameraManager.singleton;
             states = GetComponent<StateManager>();
             hMove = GetComponent<HandleMovement_Player>();
-
+            
             camManager.target = this.transform;
 
             //Init in order
@@ -36,6 +35,9 @@ namespace TPC
             hMove.Init(states,this);
 
             FixPlayerMeshes();
+
+
+            GetComponent<IK.Feet.FootIK>().Init();
         }
 
         private void FixPlayerMeshes()

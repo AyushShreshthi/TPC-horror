@@ -228,6 +228,7 @@ GameObject:
   - component: {fileID: 150573531}
   - component: {fileID: 150573530}
   - component: {fileID: 150573529}
+  - component: {fileID: 150573533}
   m_Layer: 8
   m_Name: Controller
   m_TagString: Untagged
@@ -332,6 +333,8 @@ MonoBehaviour:
   anim: {fileID: 0}
   rBody: {fileID: 0}
   controllerCollider: {fileID: 0}
+  offsetBack: {x: 0, y: 0, z: -0.3}
+  offsetFront: {x: 0, y: 0, z: 0.3}
 --- !u!136 &150573531
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -365,6 +368,18 @@ Animator:
   m_HasTransformHierarchy: 1
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorControllerStateOnDisable: 0
+--- !u!114 &150573533
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 150573528}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3045122d656997a46bf3220a21492643, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &402433755
 GameObject:
   m_ObjectHideFlags: 0
@@ -768,8 +783,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1109825134}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: -2.6569, z: 6.451}
-  m_LocalScale: {x: 5, y: 1.683177, z: 4.0950003}
+  m_LocalPosition: {x: 0, y: -2.581, z: 6.451}
+  m_LocalScale: {x: 5, y: 1.836346, z: 4.0950003}
   m_Children: []
   m_Father: {fileID: 402433756}
   m_RootOrder: 1

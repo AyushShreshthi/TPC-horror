@@ -91,6 +91,11 @@ namespace TPC
         public Rigidbody rBody;
         [HideInInspector]
         public Collider controllerCollider;
+        bool quadratic;
+
+        public Vector3 offsetBack = new Vector3(0, 0, -0.3f);
+        public Vector3 offsetFront = new Vector3(0, 0, 0.3f);
+
 
         enum ClimbCheckType
         {
@@ -185,7 +190,7 @@ namespace TPC
             RaycastHit hit=new RaycastHit();
             float targetDistance = distance;
             if (run)
-                targetDistance += 0.5f;// chanagable 
+                targetDistance += 0f;// chanagable 
 
             int numberOfhits = 0;
             for(int i = -1; i < 2; i++)
@@ -252,7 +257,6 @@ namespace TPC
                             if (!willClimb)
                             {
                                 ClimbOver(hit, ref willClimb, ClimbCheckType.climb_up);
-                                print("climb up");
                                 if (willClimb)
                                 {
                                     obstacleForward = true;
@@ -298,7 +302,7 @@ namespace TPC
         {
             float targetDistance = distanceToCheckForward + 0.2f;
             if (run)
-                targetDistance += 0.5f;
+                targetDistance += 0f;//0.5f
 
             Vector3 climbCheckOrigin = transform.position + (Vector3.up * Statics.walkupHeight);
             switch (ct)
@@ -341,7 +345,6 @@ namespace TPC
                     float diff = climbHit.point.y - transform.position.y;
                     if (Mathf.Abs(diff) > 0.4f)
                     {
-                        print(diff);
                         vaulting = true;
                         targetVaultPosition = climbHit.point;
                         obstacleForward = false;
@@ -438,51 +441,137 @@ namespace TPC
 
             RaycastHit hit = new RaycastHit();
             bool isHit = false;
-            FindGround(origin,ref hit, ref isHit);
 
-            if (!isHit)
+            //quadratic = true;
+
+            if (quadratic)
             {
-                for(int i = 0; i < 4; i++)
+                FindGround(origin, ref hit, ref isHit);
+
+                if (!isHit)
                 {
-                    Vector3 newOrigin = origin;
+                    for (int i = 0; i < 4; i++)
+                    {
+                        Vector3 newOrigin = origin;
+
+                        switch (i)
+                        {
+                            case 0:
+                                newOrigin += Vector3.forward / 3;
+                                break;
+                            case 1:
+                                newOrigin -= Vector3.forward / 3;
+                                break;
+                            case 2:
+                                newOrigin -= Vector3.right / 3;
+                                break;
+                            case 3:
+                                newOrigin += Vector3.right / 3;
+                                break;
+
+                        }
+                        FindGround(newOrigin, ref hit, ref isHit);
+
+                        if (isHit == true)
+                            break;
+                    }
+                }
+
+                r = isHit;
+
+                if (r != false)
+                {
+                    Vector3 targetPosition = transform.position;
+                    targetPosition.y = hit.point.y + groundOffset;
+                    transform.position = targetPosition;
+                }
+
+            }
+            else
+            {
+                for (int i = 0; i < 3; i++)
+                {
+                    Vector3 rightOffset = Vector3.zero;
 
                     switch (i)
                     {
-                        case 0:
-                            newOrigin += Vector3.forward/3;
-                            break;
+                        
                         case 1:
-                            newOrigin -= Vector3.forward / 3;
+                            rightOffset = transform.right * 0.2f;
                             break;
                         case 2:
-                            newOrigin -= Vector3.right / 3;
+                            rightOffset = -transform.right * 0.2f;
                             break;
-                        case 3:
-                            newOrigin += Vector3.right / 3;
+                        case 0:
+                        default:
                             break;
-
                     }
-                    FindGround(newOrigin,ref hit, ref isHit);
 
-                    if (isHit == true)
-                        break;
+
+                    Vector3 backOrigin = transform.InverseTransformDirection(offsetBack);
+                    backOrigin += transform.position + rightOffset;
+                    backOrigin.y = transform.position.y + groundDistance;
+
+                    bool backHit = false;
+
+                    FindGround(backOrigin, ref hit, ref backHit);
+                    Vector3 p1 = backOrigin;// + (-Vector3.up * groundDistance);
+                    p1.y = transform.position.y;
+
+                    if (backHit)
+                        p1 = hit.point;
+
+                    Vector3 frontOrigin = transform.InverseTransformDirection(offsetFront);
+                    frontOrigin += transform.position+rightOffset;
+                    frontOrigin.y = transform.position.y + groundDistance;
+
+                    bool frontHit = false;
+
+                    FindGround(frontOrigin, ref hit, ref frontHit);
+                    Vector3 p2 = frontOrigin;
+                    p2.y = p1.y - 0.15f;
+
+                    if (frontHit)
+                        p2 = hit.point;
+
+                    if (frontHit || backHit)
+                    {
+                        float distance = Vector3.Distance(p2, p1);
+                        distance /= 2;
+                        if (groundAngle > 0)
+                        {
+                            distance += groundAngle;
+                        }
+                        else
+                        {
+                            distance += -groundAngle * 0.3f;
+                        }
+
+                        Vector3 median = ((p2 - p1) * distance) + p1;
+                        Vector3 targetPosition = transform.position;
+                        targetPosition.y = median.y + groundOffset;
+                        transform.position = targetPosition;
+                        r = true;
+
+                        if (r)
+                            break;
+                    }
+                    else
+                    {
+                        r = false;
+                    }
                 }
             }
-            r = isHit;
-
-            if (r != false)
-            {
-                Vector3 targetPosition = transform.position;
-                targetPosition.y = hit.point.y + groundOffset;
-                transform.position = targetPosition;
-            }
-
             return r;
         }
         void FindGround(Vector3 origin, ref RaycastHit hit, ref bool isHit)
         {
-            Debug.DrawRay(origin, -Vector3.up * 0.5f, Color.red);
-            if(Physics.Raycast(origin,-Vector3.up,out hit, groundDistance, ignoreLayers))
+            float dis = groundDistance;
+            if (!quadratic)
+                dis = groundDistance +   0.3f;
+
+            Debug.DrawRay(origin, -Vector3.up * dis, Color.red);
+            if(Physics.Raycast(origin,-Vector3.up,out hit, dis, ignoreLayers))
             {
                 isHit = true;
             }
@@ -503,7 +592,7 @@ namespace TPC
             canJump = true;
 
             gameObject.layer = 8;
-            ignoreLayers = ~(1 << 3 | 1 << 8);
+            ignoreLayers = ~(1 << 3 | 1 << 8|1<<9);
 
             controllerCollider = GetComponent<Collider>();
             if (controllerCollider == null)
