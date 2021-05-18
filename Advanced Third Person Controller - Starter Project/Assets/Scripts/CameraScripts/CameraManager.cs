@@ -58,7 +58,7 @@ namespace TPC
         List<CameraState> cameraState = new List<CameraState>();
         CameraState activeState;
         CameraState defaultState;
-
+        LayerMask ignoreLayers;
         private void Awake()
         {
             singleton = this;
@@ -89,6 +89,7 @@ namespace TPC
             }
 
             activeState =  defaultState;
+            activeState = cameraState[0];
             activeStateID = activeState.id;
             FixPositions();
 
@@ -98,6 +99,7 @@ namespace TPC
                 Cursor.visible = false;
             }
 
+            ignoreLayers = ~(1 << 3 | 1 << 8);
         }
         private void FixedUpdate()
         {
@@ -111,7 +113,7 @@ namespace TPC
             if (!holdCamera)
                 HandleRotation();
 
-            //FixPositions();
+            FixPositions();
         }
 
         void CameraFollow()
@@ -175,11 +177,15 @@ namespace TPC
         private void FixPositions()
         {
             Vector3 targetPivotPosition = (activeState.useDefaultPosition) ? defaultState.pivotPosition : activeState.pivotPosition;
-            pivot.position = Vector3.Lerp(pivot.localPosition, targetPivotPosition, Time.deltaTime * moveSpeed);
+            pivot.localPosition = Vector3.Lerp(pivot.localPosition, targetPivotPosition, Time.deltaTime * moveSpeed);
 
             float targetZ = (activeState.userDefaultCameraZ) ? defaultState.cameraZ : activeState.cameraZ;
+            float actualZ = targetZ;
+
+            CameraCollisions(targetZ,ref actualZ);
+            
             Vector3 targetP = camTrans.localPosition;
-            targetP.z = Mathf.Lerp(targetP.z, targetZ, Time.deltaTime * moveSpeed);
+            targetP.z = Mathf.Lerp(targetP.z, actualZ, Time.deltaTime * moveSpeed);
             camTrans.localPosition = targetP;
 
             float targetFOV = (activeState.useDefaultFOV) ? defaultState.cameraFOV : activeState.cameraFOV;
@@ -188,6 +194,60 @@ namespace TPC
                 targetFOV = 2;
             }
             Camera.main.fieldOfView = Mathf.Lerp(Camera.main.fieldOfView, targetFOV, Time.deltaTime* moveSpeed);
+        }
+
+        private void CameraCollisions(float targetZ, ref float actualZ)
+        {
+            float step = Mathf.Abs(targetZ);
+            int stepCount = 2;
+            float stepIncremental = step / stepCount;
+
+            RaycastHit hit;
+            Vector3 origin = pivot.position;
+            Vector3 direction = -pivot.forward;
+            Debug.DrawRay(origin, direction * step, Color.yellow);
+
+            if (Physics.Raycast(origin, direction, out hit, step, ignoreLayers))
+            {
+                float distance = Vector3.Distance(hit.point, origin);
+                actualZ = -(distance / 2);
+            }
+            else
+            {
+                for(int s = 1; s < stepCount + 1; s++)
+                {
+                    for(int i = 0; i < 4; i++)
+                    {
+                        Vector3 dir = Vector3.zero;
+                        Vector3 secondOrigin = origin + (direction * s) * stepIncremental;
+
+                        switch (i)
+                        {
+                            case 0:
+                                dir = camTrans.right;
+                                break;
+                            case 1:
+                                dir = -camTrans.right;
+                                break;
+                            case 2:
+                                dir = camTrans.up;
+                                break;
+                            case 3:
+                                dir = -camTrans.up;
+                                break;
+                            default:
+                                break;
+                        }
+                        Debug.DrawRay(secondOrigin, dir * 1, Color.red);
+                        if(Physics.Raycast(secondOrigin,dir,out hit, 1, ignoreLayers))
+                        {
+                            float distance = Vector3.Distance(secondOrigin, origin);
+                            actualZ = -(distance / 2);
+                            return;
+                        }
+                    }
+                }
+            }
         }
 
         CameraState GetState(string id)

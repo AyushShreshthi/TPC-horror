@@ -926,7 +926,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   holdCamera: 0
-  addDefaultAsNormal: 1
+  addDefaultAsNormal: 0
   target: {fileID: 1148209838}
   activeStateID: 
   moveSpeed: 3
@@ -935,10 +935,19 @@ MonoBehaviour:
   turnSmoothing: 0.1
   isController: 0
   lockCursor: 0
-  pivot: {fileID: 0}
-  camTrans: {fileID: 0}
+  pivot: {fileID: 2108460120}
+  camTrans: {fileID: 1777962686}
   targetPositionOffset: {x: 0, y: 0, z: 0}
-  cameraState: []
+  cameraState:
+  - id: deault
+    minAngle: 35
+    maxAngle: 25
+    useDefaultPosition: 0
+    pivotPosition: {x: 1, y: 1, z: -5}
+    userDefaultCameraZ: 0
+    cameraZ: -5
+    useDefaultFOV: 1
+    cameraFOV: 0
 --- !u!4 &1356179461
 Transform:
   m_ObjectHideFlags: 0
