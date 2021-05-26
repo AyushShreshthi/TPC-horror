@@ -13,6 +13,7 @@ GameObject:
   - component: {fileID: 136000010484732810}
   - component: {fileID: 1521860378}
   - component: {fileID: 1521860377}
+  - component: {fileID: 358107096058550068}
   m_Layer: 8
   m_Name: Controller
   m_TagString: Untagged
@@ -96,6 +97,10 @@ MonoBehaviour:
   groundForward: 0
   groundAngle: 0
   vaulting: 0
+  meleeWeapon: 0
+  aiming: 0
+  inCover: 0
+  reloading: 0
   curState: 0
   onGround: 0
   run: 0
@@ -118,6 +123,8 @@ MonoBehaviour:
   anim: {fileID: 0}
   rBody: {fileID: 0}
   controllerCollider: {fileID: 0}
+  offsetBack: {x: 0, y: 0, z: -0.3}
+  offsetFront: {x: 0, y: 0, z: 0.3}
 --- !u!114 &1521860377
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -164,3 +171,71 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &358107096058550068
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000012756095244}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3dc23f9d25dea7c48b471eb6c3f4e612, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxWeapons: 2
+  AvailableWeapons: []
+  weaponIndex: 0
+  Weapons: []
+  states: {fileID: 0}
+  unarmed:
+    weaponID: 
+    weaponModel: {fileID: 0}
+    modelAnimator: {fileID: 0}
+    ikHolder: {fileID: 0}
+    rightHandTarget: {fileID: 0}
+    leftHandTarget: {fileID: 0}
+    lookTarget: {fileID: 0}
+    muzzle: []
+    bulletSpawner: {fileID: 0}
+    casingSpawner: {fileID: 0}
+    weaponStats:
+      curBullets: 0
+      maxBullets: 0
+      fireRate: 0
+      shootSound: {fileID: 0}
+    rightElbowTarget: {fileID: 0}
+    leftElbowTarget: {fileID: 0}
+    animType: 0
+    dis_LHIK_notAiming: 0
+    carryingAmmo: 60
+    maxAmmo: 60
+    pickablePrefab: {fileID: 0}
+    holsterWeapon: {fileID: 0}
+    meleeWeapon: 0
+  downWeapon:
+    weaponID: 
+    weaponModel: {fileID: 0}
+    modelAnimator: {fileID: 0}
+    ikHolder: {fileID: 0}
+    rightHandTarget: {fileID: 0}
+    leftHandTarget: {fileID: 0}
+    lookTarget: {fileID: 0}
+    muzzle: []
+    bulletSpawner: {fileID: 0}
+    casingSpawner: {fileID: 0}
+    weaponStats:
+      curBullets: 0
+      maxBullets: 0
+      fireRate: 0
+      shootSound: {fileID: 0}
+    rightElbowTarget: {fileID: 0}
+    leftElbowTarget: {fileID: 0}
+    animType: 0
+    dis_LHIK_notAiming: 0
+    carryingAmmo: 60
+    maxAmmo: 60
+    pickablePrefab: {fileID: 0}
+    holsterWeapon: {fileID: 0}
+    meleeWeapon: 0
+  startUnarmed: 0

@@ -89,7 +89,6 @@ namespace TPC
             }
 
             activeState =  defaultState;
-            activeState = cameraState[0];
             activeStateID = activeState.id;
             FixPositions();
 
@@ -98,7 +97,6 @@ namespace TPC
                 Cursor.lockState = CursorLockMode.Locked;
                 Cursor.visible = false;
             }
-
             ignoreLayers = ~(1 << 3 | 1 << 8);
         }
         private void FixedUpdate()
@@ -185,7 +183,7 @@ namespace TPC
             CameraCollisions(targetZ,ref actualZ);
             
             Vector3 targetP = camTrans.localPosition;
-            targetP.z = Mathf.Lerp(targetP.z, actualZ, Time.deltaTime * moveSpeed);
+            targetP.z = Mathf.Lerp(targetP.z, actualZ, Time.deltaTime*7 );
             camTrans.localPosition = targetP;
 
             float targetFOV = (activeState.useDefaultFOV) ? defaultState.cameraFOV : activeState.cameraFOV;
@@ -205,7 +203,7 @@ namespace TPC
             RaycastHit hit;
             Vector3 origin = pivot.position;
             Vector3 direction = -pivot.forward;
-            Debug.DrawRay(origin, direction * step, Color.yellow);
+            Debug.DrawRay(origin, direction * step, Color.blue);
 
             if (Physics.Raycast(origin, direction, out hit, step, ignoreLayers))
             {
@@ -214,9 +212,9 @@ namespace TPC
             }
             else
             {
-                for(int s = 1; s < stepCount + 1; s++)
+                for (int s = 1; s < stepCount + 1; s++)
                 {
-                    for(int i = 0; i < 4; i++)
+                    for (int i = 0; i < 4; i++)
                     {
                         Vector3 dir = Vector3.zero;
                         Vector3 secondOrigin = origin + (direction * s) * stepIncremental;

@@ -311,6 +311,10 @@ MonoBehaviour:
   groundForward: 0
   groundAngle: 0
   vaulting: 0
+  meleeWeapon: 0
+  aiming: 0
+  inCover: 0
+  reloading: 0
   curState: 0
   onGround: 0
   run: 0
@@ -926,7 +930,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   holdCamera: 0
-  addDefaultAsNormal: 0
+  addDefaultAsNormal: 1
   target: {fileID: 1148209838}
   activeStateID: 
   moveSpeed: 3
@@ -935,19 +939,10 @@ MonoBehaviour:
   turnSmoothing: 0.1
   isController: 0
   lockCursor: 0
-  pivot: {fileID: 2108460120}
-  camTrans: {fileID: 1777962686}
+  pivot: {fileID: 0}
+  camTrans: {fileID: 0}
   targetPositionOffset: {x: 0, y: 0, z: 0}
-  cameraState:
-  - id: deault
-    minAngle: 35
-    maxAngle: 25
-    useDefaultPosition: 0
-    pivotPosition: {x: 1, y: 1, z: -5}
-    userDefaultCameraZ: 0
-    cameraZ: -5
-    useDefaultFOV: 1
-    cameraFOV: 0
+  cameraState: []
 --- !u!4 &1356179461
 Transform:
   m_ObjectHideFlags: 0
@@ -1026,11 +1021,11 @@ Camera:
     y: 0
     width: 1
     height: 1
-  near clip plane: 0.3
-  far clip plane: 1000
+  near clip plane: 0.1
+  far clip plane: 5000
   field of view: 60
   orthographic: 0
-  orthographic size: 5
+  orthographic size: 10
   m_Depth: 0
   m_CullingMask:
     serializedVersion: 2
@@ -1163,7 +1158,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1777962685}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: -2}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 1493893461}
@@ -1287,7 +1282,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2108460119}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.4, y: 2, z: -2}
+  m_LocalPosition: {x: 0, y: 2, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 1777962686}

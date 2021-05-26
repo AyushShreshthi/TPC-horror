@@ -11,7 +11,7 @@ namespace TPC
         public GameObject modelPrefab;
         public bool inGame;
         public bool isPlayer;
-
+        
         [Header("Stats")]
         public float groundDistance = 0.6f;
         public float groundOffset = 0f;
@@ -31,6 +31,12 @@ namespace TPC
         public bool groundForward;
         public float groundAngle;
         public bool vaulting;
+
+        [Header("Combat")]
+        public bool meleeWeapon;
+        public bool aiming;
+        public bool inCover;
+        public bool reloading;
 
         #region StateRequests
         [Header("State Requests")]
@@ -447,7 +453,6 @@ namespace TPC
             if (quadratic)
             {
                 FindGround(origin, ref hit, ref isHit);
-
                 if (!isHit)
                 {
                     for (int i = 0; i < 4; i++)
