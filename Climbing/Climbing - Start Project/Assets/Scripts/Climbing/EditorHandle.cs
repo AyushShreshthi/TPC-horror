@@ -60,44 +60,39 @@ namespace Climbing
     [CustomEditor(typeof(DrawLine))]
     public class EditorVis : Editor
     {
-        //private void OnSceneGUI()
-        //{
-        //    DrawLine t = target as DrawLine;
+        private void OnSceneGUI()
+        {
+            DrawLine t = target as DrawLine;
 
-        //    if (t == null)
-        //        return;
+            if (t == null)
+                return;
 
-        //    if (t.ConnectedPoints.Count == 0)
-        //    {
-        //        t.ConnectedPoints.AddRange(t.transform.GetComponent<HandlePointConnections>().GetAllConnections());
-        //    }
-        //    for (int i = 0; i < t.ConnectedPoints.Count; i++)
-        //    {
-        //        if (t.ConnectedPoints[i].target == null)
-        //        {
-        //            continue;
-        //        }
+            if (t.ConnectedPoints.Count == 0)
+            {
+                t.ConnectedPoints.AddRange(t.transform.GetComponent<HandlePointConnections>().GetAllConnections());
+            }
+            for (int i = 0; i < t.ConnectedPoints.Count; i++)
+            {
+                Vector3 pos1 = t.ConnectedPoints[i].target1.transform.position;
 
-        //        Vector3 pos1 = t.ConnectedPoints[i].target1.transform.position;
+                Vector3 pos2 = t.ConnectedPoints[i].target2.transform.position;
 
-        //        Vector3.pos2 = t.ConnectedPoints[i].target2.transform.position;
+                switch (t.ConnectedPoints[i].cType)
+                {
+                    case ConnectionType.direct:
+                        Handles.color = Color.red;
+                        break;
+                    case ConnectionType.inBetween:
+                        Handles.color = Color.green;
+                        break;
 
-        //        switch (t.ConnectedPoints[i].cType)
-        //        {
-        //            case ConnectionType.direct:
-        //                Handles.color = Color.red;
-        //                break;
-        //            case ConnectionType.inBetween:
-        //                Handles.color = Color.green;
-        //                break;
+                }
 
-        //        }
+                Handles.DrawLine(pos1, pos2);
+                t.refresh = false;
 
-        //        Handles.DrawLine(pos1, pos2);
-        //        t.refresh = false;
-
-        //    }
-        //}
+            }
+        }
     }
 
     [CustomEditor(typeof(DrawLineIndividual))]

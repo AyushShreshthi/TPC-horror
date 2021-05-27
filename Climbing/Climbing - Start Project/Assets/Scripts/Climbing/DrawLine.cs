@@ -1,18 +1,26 @@
-﻿using System.Collections;
+﻿#if UNITY_EDITOR
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEditor;
 
-public class DrawLine : MonoBehaviour
+namespace Climbing
 {
-    // Start is called before the first frame update
-    void Start()
+    [ExecuteInEditMode]
+    public class DrawLine : MonoBehaviour
     {
-        
-    }
+        public List<Connection> ConnectedPoints = new List<Connection>();
 
-    // Update is called once per frame
-    void Update()
-    {
-        
+        public bool refresh;
+
+        private void Update()
+        {
+            if (refresh)
+            {
+                ConnectedPoints.Clear();
+                refresh = false;
+            }
+        }
     }
 }
+#endif
