@@ -226,7 +226,7 @@ namespace Climbing
 
                     Neighbour n2 = new Neighbour();
                     n2.direction = -Vector3.up;
-                    n2.target = dismountPoint;
+                    n2.target = p;
                     n2.cType = ConnectionType.dismount;
                     dismountPoint.neighbours.Add(n2);
 
@@ -241,7 +241,7 @@ namespace Climbing
 
             for(int p = 0; p < allPoints.Count; p++)
             {
-                for(int n = 0; n < allPoints[p].neighbours.Count; p++)
+                for(int n = 0; n < allPoints[p].neighbours.Count; n++)
                 {
                     Connection con = new Connection();
                     con.target1 = allPoints[p];
