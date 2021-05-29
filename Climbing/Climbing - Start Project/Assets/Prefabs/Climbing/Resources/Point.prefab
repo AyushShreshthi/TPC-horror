@@ -233,7 +233,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   neighbours: []
-  iks: []
+  iks:
+  - ik: 0
+    target: {fileID: 473438}
+    hint: {fileID: 426386}
+  - ik: 2
+    target: {fileID: 472466}
+    hint: {fileID: 461476}
+  - ik: 1
+    target: {fileID: 418982}
+    hint: {fileID: 444034}
+  - ik: 3
+    target: {fileID: 486370}
+    hint: {fileID: 473242}
 --- !u!114 &911171414334359639
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -260,7 +272,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a34597459ad04eb49a0274e718579384, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ikPos: []
+  ikPos:
+  - ik: 0
+    target: {fileID: 473438}
+    hint: {fileID: 426386}
+  - ik: 2
+    target: {fileID: 472466}
+    hint: {fileID: 461476}
+  - ik: 1
+    target: {fileID: 418982}
+    hint: {fileID: 444034}
+  - ik: 3
+    target: {fileID: 486370}
+    hint: {fileID: 473242}
   refresh: 0
 --- !u!1 &164114
 GameObject:
