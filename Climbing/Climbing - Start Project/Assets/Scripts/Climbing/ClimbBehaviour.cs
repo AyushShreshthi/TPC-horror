@@ -232,10 +232,10 @@ namespace Climbing
 
                 transform.parent = curPoint.transform.parent;
 
-                if (climbState == ClimbStates.onPoint)
-                {
-                    //ik.
-                }
+                //if (climbState == ClimbStates.onPoint)
+                //{
+                //    //ik.
+                //}
 
             }
             else
@@ -251,19 +251,19 @@ namespace Climbing
                 case ConnectionType.inBetween:
                     UpdateLinearvariables();
                     Linear_RootMovement();
-                    LerpIKLandingSide_Linear();
+                    //LerpIKLandingSide_Linear();
                     WrapUp();
                     break;
                 case ConnectionType.direct:
                     UpdateDirectVariables(inputDirection);
                     Direct_RootMovement();
-                    DirectHandleIK();
+                   // DirectHandleIK();
                     WrapUp(true);
                     break;
                 case ConnectionType.dismount:
                     HandleDismountVariables();
                     Dismount_RootMovement();
-                    HandleDismountIK();
+                    //HandleDismountIK();
                     DismountWrapUp();
                     break;
             }
@@ -489,7 +489,7 @@ namespace Climbing
 
                 _distance = Vector3.Distance(_targetPos, _startPos);
 
-                InitIK(directionToPoint, !twoStep);
+                //InitIK(directionToPoint, !twoStep);
             }
         }
 
@@ -623,7 +623,8 @@ namespace Climbing
                         targetPoint = closestPoint;
                         targetPosition = closestPoint.transform.position;
                         curPoint = closestPoint;
-                        print(curPoint.transform.position);
+
+
                         climbing = true;
                         lockInput = true;
                         targetState = ClimbStates.onPoint;

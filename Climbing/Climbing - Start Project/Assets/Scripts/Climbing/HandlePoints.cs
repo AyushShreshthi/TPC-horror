@@ -109,6 +109,7 @@ namespace Climbing
         }
         private void UpdatePoints()
         {
+            return;
             Point[] ps = GetComponentsInChildren<Point>();
 
             if (singlePoint)

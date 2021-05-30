@@ -11,7 +11,7 @@ namespace Climbing
     public class HandlePointConnections : MonoBehaviour
     {
         public float minDistance = 2.5f;
-        public float directThreshold = 1;
+        public float directThreshold = 1.5f;
         public bool updateConnections;
         public bool resetConnections;
 
