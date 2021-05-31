@@ -29,7 +29,7 @@ namespace Climbing
         Vector3 rhTargetPosition;
         Vector3 rfTargetPosition;
 
-        public float helperSpeed = 15;
+        public float helperSpeed = 25;
 
         Transform hips;
 
@@ -326,8 +326,43 @@ namespace Climbing
 
                 if (ik == AvatarIKGoal.LeftHand || ik == AvatarIKGoal.RightHand)
                 {
+                    Transform shoulder = (ik == AvatarIKGoal.LeftHand) ?
+                        anim.GetBoneTransform(HumanBodyBones.LeftShoulder) :
+                        anim.GetBoneTransform(HumanBodyBones.RightShoulder);
 
+                    Vector3 targetRotationDir = shoulder.transform.position - helper.transform.position;
+                    Quaternion targetRot = Quaternion.LookRotation(-targetRotationDir);
+                    helper.rotation = targetRot;
                 }
+                else
+                {
+                    helper.rotation = holder.target.transform.rotation;
+                }
+
+                if (holder.hint != null)
+                {
+                    anim.SetIKHintPositionWeight(h, weight);
+                    anim.SetIKHintPosition(h, holder.hint.position);
+                }
+            }
+        }
+
+        public void InfluenceWeight(AvatarIKGoal ik,float t)
+        {
+            switch (ik)
+            {
+                case AvatarIKGoal.LeftFoot:
+                    lf = t;
+                    break;
+                case AvatarIKGoal.LeftHand:
+                    lh = t;
+                    break;
+                case AvatarIKGoal.RightFoot:
+                    rf = t;
+                    break;
+                case AvatarIKGoal.RightHand:
+                    rh = t;
+                    break;
             }
         }
 

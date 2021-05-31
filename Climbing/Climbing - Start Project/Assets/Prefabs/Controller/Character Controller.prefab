@@ -235,6 +235,7 @@ GameObject:
   - component: {fileID: 11473732}
   - component: {fileID: 961416925}
   - component: {fileID: 6632838409200651737}
+  - component: {fileID: 360511807}
   m_Layer: 9
   m_Name: Character Controller
   m_TagString: Untagged
@@ -389,7 +390,34 @@ MonoBehaviour:
     m_RotationOrder: 4
   a_mountCurve:
     serializedVersion: 2
-    m_Curve: []
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: -0.0010295474
+      outSlope: -0.0010295474
+      tangentMode: 34
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 0.97406703
+      value: 0.99899715
+      inSlope: -0.0061610704
+      outSlope: -0.0061610704
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.62131596
+    - serializedVersion: 3
+      time: 0.9958191
+      value: 0.92139435
+      inSlope: -3.5676072
+      outSlope: -3.5676072
+      tangentMode: 34
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
@@ -406,6 +434,24 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3e779178a063f2445af4f2fb81c6742e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &360511807
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 112168}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cd2fa6a9f6373fb4dac91d62777d54f7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  lh: 1
+  rh: 1
+  lf: 1
+  rf: 1
+  helperSpeed: 15
+  forceFeetHeight: 0
 --- !u!1 &112186
 GameObject:
   m_ObjectHideFlags: 0

@@ -13,7 +13,7 @@ namespace Climbing
         bool waitForWrapUp;
 
         Animator anim;
-        //ClimbIK ik;
+        ClimbIK ik;
 
         Manager curManager;
         Point targetPoint;
@@ -83,7 +83,7 @@ namespace Climbing
         private void Start()
         {
             anim = GetComponentInChildren<Animator>();
-            //ik = GetComponentInChildren<ClimbIK>();
+            ik = GetComponentInChildren<ClimbIK>();
             SetCurveReferences();
         }
 
@@ -147,11 +147,13 @@ namespace Climbing
                 initTransit = false;
                 ikLandSideReached = false;
                 climbState = targetState;
+            
             }
+
+            HandleWeightAll(_t, a_mountCurve);
+
             Vector3 targetPos = curCurve.GetPointAt(_t);
             transform.position = targetPos;
-
-            //HandleWeightAll(_t, a_mountCurve);
 
             HandleRotation();
         }
@@ -168,9 +170,10 @@ namespace Climbing
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 5);
         }
 
-        private void HandleWeightAll(float t, AnimationCurve a_mountCurve)
+        private void HandleWeightAll(float t, AnimationCurve aCurve)
         {
-            throw new NotImplementedException();
+            float inf = aCurve.Evaluate(t);
+            ik.AddWeightInfluenceAll(1 - inf);
         }
 
         private void InitClimbing()
@@ -179,12 +182,12 @@ namespace Climbing
             {
                 initClimb = true;
 
-                //if (ik != null)
-                //{
-                //    ik.UpdateAllPointOnOne(targetPoint);
-                //    ik.UpdateAllTargetPositions(targetPoint);
-                //    ik.ImmediatePlaceHelpers();
-                //}
+                if (ik != null)
+                {
+                    ik.UpdateAllPointsOnOne(targetPoint);
+                    ik.UpdateAllTargetPositions(targetPoint);
+                    ik.ImmediatePlaceHelpers();
+                }
 
                 curConnection = ConnectionType.direct;
                 targetState = ClimbStates.onPoint;
@@ -251,19 +254,19 @@ namespace Climbing
                 case ConnectionType.inBetween:
                     UpdateLinearvariables();
                     Linear_RootMovement();
-                    //LerpIKLandingSide_Linear();
+                    LerpIKLandingSide_Linear();
                     WrapUp();
                     break;
                 case ConnectionType.direct:
                     UpdateDirectVariables(inputDirection);
                     Direct_RootMovement();
-                   // DirectHandleIK();
+                    DirectHandleIK();
                     WrapUp(true);
                     break;
                 case ConnectionType.dismount:
                     HandleDismountVariables();
                     Dismount_RootMovement();
-                    //HandleDismountIK();
+                    HandleDismountIK();
                     DismountWrapUp();
                     break;
             }
@@ -285,7 +288,39 @@ namespace Climbing
 
         private void HandleDismountIK()
         {
-            throw new NotImplementedException();
+            if (enableRootMovement)
+                _ikT += Time.deltaTime * 3;
+
+            _fikT += Time.deltaTime * 2;
+
+            HandleIKWeight_Dismount(_ikT, _fikT, 1, 0);
+        }
+
+        private void HandleIKWeight_Dismount(float ht, float gt, int from, int to)
+        {
+            float t1 = ht * 3;
+
+            if (t1 > 1)
+            {
+                t1 = 1;
+                ikLandSideReached = true;
+            }
+
+            float handsWeight = Mathf.Lerp(from, to, t1);
+            ik.InfluenceWeight(AvatarIKGoal.LeftHand, handsWeight);
+            ik.InfluenceWeight(AvatarIKGoal.RightHand, handsWeight);
+
+            float t2 = t1 * 1;
+
+            if (t2 > 1)
+            {
+                t2 = 1;
+                ikFollowSideReached = true;
+            }
+
+            float feetWeight = Mathf.Lerp(from, to, t2);
+            ik.InfluenceWeight(AvatarIKGoal.LeftFoot, feetWeight);
+            ik.InfluenceWeight(AvatarIKGoal.RightFoot, feetWeight);
         }
 
         private void Dismount_RootMovement()
@@ -325,8 +360,8 @@ namespace Climbing
                 points[0].transform.position = _startPos;
                 points[points.Length - 1].transform.position = _targetPos;
 
-               // _ikT = 0;
-                //_fikT = 0;
+                _ikT = 0;
+                _fikT = 0;
             }
         }
         #endregion
@@ -334,9 +369,113 @@ namespace Climbing
         #region Direct
         private void DirectHandleIK()
         {
+            if (inputDirection.y != 0)
+            {
+                LerpIKHands_Direct();
+                LerpIKFeet_Direct();
+            }
+            else
+            {
+                LerpIKLandingSide_Direct();
+                LerpIKFollowSide_Direct();
+            }
+        }
+        void LerpIKHands_Direct()
+        {
+            if (enableRootMovement)
+                _ikT += Time.deltaTime * 5;
 
+            if (_ikT > 1)
+            {
+                _ikT = 1;
+                ikLandSideReached = true;
+            }
+
+            Vector3 lhPosition = Vector3.LerpUnclamped(_ikStartPos[0], _ikTargetPos[0], _ikT);
+            ik.UpdateTargetPositions(AvatarIKGoal.LeftHand, lhPosition);
+
+            Vector3 rhPosition = Vector3.LerpUnclamped(_ikStartPos[2], _ikTargetPos[2], _ikT);
+            ik.UpdateTargetPositions(AvatarIKGoal.RightHand, rhPosition);
         }
 
+        void LerpIKFeet_Direct()
+        {
+            if (targetPoint.pointType == PointType.hanging)
+            {
+                ik.InfluenceWeight(AvatarIKGoal.LeftFoot, 0);
+                ik.InfluenceWeight(AvatarIKGoal.RightFoot, 0);
+            }
+            else
+            {
+                if (enableRootMovement)
+                    _fikT += Time.deltaTime * 5;
+
+                if (_fikT > 1)
+                {
+                    _fikT = 1;
+                    ikFollowSideReached = true;
+                }
+
+                Vector3 lfPosition = Vector3.LerpUnclamped(_ikStartPos[1], _ikTargetPos[1], _fikT);
+                ik.UpdateTargetPositions(AvatarIKGoal.LeftFoot, lfPosition);
+
+                Vector3 rfPosition = Vector3.LerpUnclamped(_ikStartPos[3], _ikTargetPos[3], _fikT);
+                ik.UpdateTargetPositions(AvatarIKGoal.RightFoot, rfPosition);
+            }
+        }
+
+        void LerpIKLandingSide_Direct()
+        {
+            if (enableRootMovement)
+                _ikT += Time.deltaTime * 3.2f;
+
+            if (_ikT > 1)
+            {
+                _ikT = 1;
+                ikLandSideReached = true;
+            }
+
+            Vector3 landPosition = Vector3.LerpUnclamped(_ikStartPos[0], _ikTargetPos[0], _ikT);
+            ik.UpdateTargetPositions(ik_L, landPosition);
+
+            if (targetPoint.pointType == PointType.hanging)
+            {
+                ik.InfluenceWeight(AvatarIKGoal.LeftFoot, 0);
+                ik.InfluenceWeight(AvatarIKGoal.RightFoot, 0);
+            }
+            else
+            {
+                Vector3 followPosition = Vector3.LerpUnclamped(_ikStartPos[1], _ikTargetPos[1], _ikT);
+                ik.UpdateTargetPositions(ik_F, followPosition);
+            }
+        }
+
+        void LerpIKFollowSide_Direct()
+        {
+            if (enableRootMovement)
+                _fikT += Time.deltaTime * 2.6f;
+
+            if (_fikT > 1)
+            {
+                _fikT = 1;
+                ikFollowSideReached = true;
+            }
+
+            Vector3 landPosition = Vector3.LerpUnclamped(_ikStartPos[2], _ikTargetPos[2], _fikT);
+            ik.UpdateTargetPositions(ik.ReturnOppositeIK(ik_L), landPosition);
+
+            if (targetPoint.pointType == PointType.hanging)
+            {
+                ik.InfluenceWeight(AvatarIKGoal.LeftFoot, 0);
+                ik.InfluenceWeight(AvatarIKGoal.RightFoot, 0);
+            }
+            else
+            {
+
+                Vector3 followPosition = Vector3.LerpUnclamped(_ikStartPos[3], _ikTargetPos[3], _fikT);
+                ik.UpdateTargetPositions(ik.ReturnOppositeIK(ik_F), followPosition);
+            }
+        }
         private void Direct_RootMovement()
         {
             if (enableRootMovement)
@@ -409,8 +548,37 @@ namespace Climbing
                 points[0].transform.position = _startPos;
                 points[points.Length - 1].transform.position = _targetPos;
 
-                //InitIK(inputDirection);
+                
+                InitIK_Direct(inputDirection);
             }
+        }
+
+        private void InitIK_Direct(Vector3 directionToPoint)
+        {
+            if (directionToPoint.y != 0)
+            {
+                _fikT = 0;
+                _ikT = 0;
+
+                UpdateIKTarget(0, AvatarIKGoal.LeftHand, targetPoint);
+                UpdateIKTarget(1, AvatarIKGoal.LeftFoot, targetPoint);
+
+                UpdateIKTarget(2, AvatarIKGoal.RightHand, targetPoint);
+                UpdateIKTarget(3, AvatarIKGoal.RightFoot, targetPoint);
+
+            }
+            else
+            {
+                InitIK(directionToPoint, false);
+                InitIKOpposite();
+            }
+
+        }
+
+        private void InitIKOpposite()
+        {
+            UpdateIKTarget(2, ik.ReturnOppositeIK(ik_L), targetPoint);
+            UpdateIKTarget(3, ik.ReturnOppositeIK(ik_F), targetPoint);
         }
 
         private void WrapUp(bool direct=false)
@@ -444,7 +612,29 @@ namespace Climbing
         }
         private void LerpIKLandingSide_Linear()
         {
-            throw new NotImplementedException();
+            float speed = speed_linear * Time.deltaTime;
+            float lerpSpeed = speed / _distance;
+
+            _ikT += lerpSpeed * 3;
+
+            if (_ikT > 1)
+            {
+                _ikT = 1;
+                ikLandSideReached = true;
+            }
+
+            Vector3 ikPosition = Vector3.LerpUnclamped(_ikStartPos[0], _ikTargetPos[0], _ikT);
+            ik.UpdateTargetPositions(ik_L, ikPosition);
+
+            _fikT += lerpSpeed * 2;
+            if (_fikT > 1)
+            {
+                _fikT = 1;
+                ikFollowSideReached = true;
+            }
+
+            Vector3 followSide = Vector3.LerpUnclamped(_ikStartPos[1], _ikTargetPos[1], _fikT);
+            ik.UpdateTargetPositions(ik_F, followSide);
         }
         #endregion
 
@@ -493,14 +683,74 @@ namespace Climbing
             }
         }
 
-        private void InitIK(Vector3 directionToPoint, bool v=false)
+        private void InitIK(Vector3 directionToPoint, bool opposite)
         {
-            throw new NotImplementedException();
+            Vector3 relativeDirection = transform.InverseTransformDirection(directionToPoint);
+
+            if (Mathf.Abs(relativeDirection.y) > 0.5f)
+            {
+                float targetAnim = 0;
+
+                if (targetState == ClimbStates.onPoint)
+                {
+                    ik_L = ik.ReturnOppositeIK(ik_L);
+                }
+                else
+                {
+                    if (Mathf.Abs(relativeDirection.x) > 0)
+                    {
+                        if (relativeDirection.x < 0)
+                        {
+                            ik_L = AvatarIKGoal.LeftHand;
+                        }
+                        else
+                            ik_L = AvatarIKGoal.RightHand;
+                    }
+
+                    targetAnim = (ik_L == AvatarIKGoal.RightHand) ? 1 : 0;
+                    if (relativeDirection.y < 0)
+                    {
+                        targetAnim = (ik_L == AvatarIKGoal.RightHand) ? 0 : 1;
+                    }
+                    anim.SetFloat("Movement", targetAnim);
+
+                }
+            }
+            else
+            {
+                ik_L = (relativeDirection.x < 0) ? AvatarIKGoal.LeftHand : AvatarIKGoal.RightHand;
+
+                if (opposite)
+                {
+                    ik_L = ik.ReturnOppositeIK(ik_L);
+                }
+            }
+
+            _ikT = 0;
+            UpdateIKTarget(0, ik_L, targetPoint);
+
+            ik_F = ik.ReturnOppositeLimb(ik_L);
+            _fikT = 0;
+            UpdateIKTarget(1, ik_F, targetPoint);
         }
-        #endregion
+
+        private void UpdateIKTarget(int posIndex, AvatarIKGoal _ikGoal, Point tp)
+        {
+            _ikStartPos[posIndex] = ik.ReturnCurrentPointPosition(_ikGoal);
+            _ikTargetPos[posIndex] = tp.ReturnIK(_ikGoal).target.transform.position;
+            ik.UpdatePoint(_ikGoal, tp);
+        }
+
 
         #endregion
 
+        #endregion
+        AvatarIKGoal ik_L;
+        AvatarIKGoal ik_F;
+        float _ikT;
+        float _fikT;
+        Vector3[] _ikStartPos = new Vector3[4];
+        Vector3[] _ikTargetPos = new Vector3[4];
         #region Others
         private void BetweenPoints(Vector3 inD)
         {

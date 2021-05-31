@@ -7,6 +7,7 @@ namespace Climbing
     [System.Serializable]
     public class Point : MonoBehaviour
     {
+        public PointType pointType;
         public List<Neighbour> neighbours = new List<Neighbour>();
         public List<IKPositions> iks = new List<IKPositions>();
 
@@ -60,5 +61,10 @@ namespace Climbing
         direct,
         dismount,
         fall
+    }
+    public enum PointType
+    {
+        braced,
+        hanging
     }
 }
