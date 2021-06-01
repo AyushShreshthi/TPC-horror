@@ -14,9 +14,12 @@ namespace Climbing
         public float directThreshold = 1.5f;
         public bool updateConnections;
         public bool resetConnections;
+        public bool unparentIKs;
 
         List<Point> allPoints = new List<Point>();
         Vector3[] availableDirections = new Vector3[8];
+
+        public List<GameObject> dismountPoints = new List<GameObject>();
 
         void CreateDirections()
         {
@@ -33,20 +36,36 @@ namespace Climbing
         {
             if (updateConnections)
             {
+                ClearGarbage();
                 GetPoints();
                 CreateDirections();
                 CreateConnections();
                 FindDismountCanidates();
+                FindFallCanidates();
+                FindHangingPoints();
                 RefreshAll();
 
                 updateConnections = false;
             }
             if (resetConnections)
             {
+                ClearGarbage();
                 GetPoints();
                 for(int p = 0; p < allPoints.Count; p++)
                 {
+                    List<Neighbour> customConnections = new List<Neighbour>();
+
+                    for(int i = 0; i < allPoints[p].neighbours.Count; i++)
+                    {
+                        if (allPoints[p].neighbours[i].customConnection)
+                        {
+                            customConnections.Add(allPoints[p].neighbours[i]);
+                        }
+                    }
+
                     allPoints[p].neighbours.Clear();
+
+                    allPoints[p].neighbours.AddRange(customConnections);
 
                 }
                 RefreshAll();
@@ -54,6 +73,40 @@ namespace Climbing
             }
         }
 
+        private void FindHangingPoints()
+        {
+            HandlePoints[] hp = GetComponentsInChildren<HandlePoints>();
+
+            List<Point> canidates = new List<Point>();
+
+            for(int i = 0; i < hp.Length; i++)
+            {
+                if (hp[i].hangingPoints)
+                {
+                    canidates.AddRange(hp[i].pointsInOrder);
+                }
+            }
+            if (canidates.Count > 0)
+            {
+                foreach(Point p in canidates)
+                {
+                    p.pointType = PointType.hanging;
+
+                    Vector3 targetP = Vector3.zero;
+                    targetP.y = -1.5f;
+                    p.transform.localPosition = targetP;
+                }
+            }
+        }
+
+        private void ClearGarbage()
+        {
+            foreach(GameObject go in dismountPoints)
+            {
+                Destroy(go);
+            }
+            dismountPoints.Clear();
+        }
 
         void GetPoints()
         {
@@ -206,7 +259,7 @@ namespace Climbing
                 parentObj.name = "Dismount Points";
                 parentObj.transform.parent = transform;
                 parentObj.transform.localPosition = Vector3.zero;
-                parentObj.transform.position = canidates[0].transform.localPosition;
+                parentObj.transform.position = canidates[0].transform.position;
 
                 foreach(Point p in canidates)
                 {
@@ -231,10 +284,66 @@ namespace Climbing
                     dismountPoint.neighbours.Add(n2);
 
                     dismountObject.transform.parent = parentObj.transform;
+
+                    RaycastHit hit;
+                    if(Physics.Raycast(dismountObject.transform.position,-Vector3.up,out hit, 2))
+                    {
+                        Vector3 gp = hit.point;
+                        gp.y += 0.04f + Mathf.Abs(dismountPoint.transform.localPosition.y);
+                        dismountObject.transform.position = gp;
+                    }
+
+                    dismountPoints.Add(dismountObject);
                 }
             }
         }
 
+        void FindFallCanidates()
+        {
+            Point[] ps = GetComponentsInChildren<Point>();
+
+            foreach(Point p in ps)
+            {
+                Neighbour down = p.ReturnNeighbour_FromDIrection(-Vector3.up);
+
+                if (down == null)
+                {
+                    RaycastHit hit;
+                    if (Physics.Raycast(p.transform.position, -Vector3.up, out hit, 3))
+                    {
+
+                        Neighbour n = new Neighbour();
+                        n.direction = -Vector3.up;
+                        n.target = p;
+                        n.cType = ConnectionType.fall;
+                        p.neighbours.Add(n);
+                    }
+                }
+            }
+
+           /* HandlePoints[] hp = GetComponentsInChildren<HandlePoints>();
+
+            List<Point> canidates = new List<Point>();
+
+            for(int i = 0; i < hp.Length; i++)
+            {
+                if (hp[i].fallPoint)
+                {
+                    canidates.AddRange(hp[i].pointsInOrder);
+                }
+            }
+            if (canidates.Count > 0)
+            {
+                foreach(Point p in canidates)
+                {
+                    Neighbour n = new Neighbour();
+                    n.direction = -Vector3.up;
+                    n.target = p;
+                    n.cType = ConnectionType.fall;
+                    p.neighbours.Add(n);
+                }
+            }*/
+        }
         public List<Connection> GetAllConnections()
         {
             List<Connection> retVal = new List<Connection>();

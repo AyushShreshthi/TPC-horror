@@ -10,7 +10,7 @@ namespace Climbing
     public class DrawLineIndividual : MonoBehaviour
     {
         public List<Neighbour> ConnectedPoints = new List<Neighbour>();
-
+        public DrawLine.LineOrigin lineOrigin;
         public bool refresh;
 
         private void Update()

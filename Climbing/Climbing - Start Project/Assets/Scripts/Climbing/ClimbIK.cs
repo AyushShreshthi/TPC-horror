@@ -23,7 +23,7 @@ namespace Climbing
         Transform lfHelper;
         Transform rhHelper;
         Transform rfHelper;
-
+       
         Vector3 lhTargetPosition;
         Vector3 lfTargetPosition;
         Vector3 rhTargetPosition;
@@ -128,15 +128,15 @@ namespace Climbing
                     retVal = lfHolder.target.transform.position;
                     break;
                 case AvatarIKGoal.RightFoot:
-                    IKPositions rfHolder = lfPoint.ReturnIK(AvatarIKGoal.RightFoot);
+                    IKPositions rfHolder = rfPoint.ReturnIK(AvatarIKGoal.RightFoot);
                     retVal = rfHolder.target.transform.position;
                     break;
                 case AvatarIKGoal.LeftHand:
-                    IKPositions lhHolder = lfPoint.ReturnIK(AvatarIKGoal.LeftHand);
+                    IKPositions lhHolder = lhPoint.ReturnIK(AvatarIKGoal.LeftHand);
                     retVal = lhHolder.target.transform.position;
                     break;
                 case AvatarIKGoal.RightHand:
-                    IKPositions rhHolder = lfPoint.ReturnIK(AvatarIKGoal.RightHand);
+                    IKPositions rhHolder = rhPoint.ReturnIK(AvatarIKGoal.RightHand);
                     retVal = rhHolder.target.transform.position;
                     break;
                 default:
@@ -243,7 +243,7 @@ namespace Climbing
             {
                 lfHelper.position = lfTargetPosition;
             }
-            if (lhPoint != null)
+            if (rfPoint != null)
             {
                 rfHelper.position = rfTargetPosition;
             }
@@ -259,7 +259,7 @@ namespace Climbing
                 {
                     lhHelper.transform.position = Vector3.Lerp(lhHelper.transform.position, lhTargetPosition,Time.deltaTime*helperSpeed);
                 }
-                UpdateIK(AvatarIKGoal.LeftHand, lhHolder, lhHelper, lh, AvatarIKHint.LeftElbow);
+                UpdateIK(AvatarIKGoal.LeftHand, lhHolder, lhHelper, lh, AvatarIKHint.LeftElbow);//leftelbow
             }
             if (rhPoint)
             {
@@ -327,10 +327,16 @@ namespace Climbing
                 if (ik == AvatarIKGoal.LeftHand || ik == AvatarIKGoal.RightHand)
                 {
                     Transform shoulder = (ik == AvatarIKGoal.LeftHand) ?
-                        anim.GetBoneTransform(HumanBodyBones.LeftShoulder) :
-                        anim.GetBoneTransform(HumanBodyBones.RightShoulder);
+                        anim.GetBoneTransform(HumanBodyBones.LeftShoulder) ://leftshoulder
+                        anim.GetBoneTransform(HumanBodyBones.RightShoulder);//rightshoulder
 
-                    Vector3 targetRotationDir = shoulder.transform.position - helper.transform.position;
+                    Vector3 offset = Vector3.zero;
+                    offset += transform.forward;
+                    offset += Vector3.up / 2;
+
+                    Vector3 targetRotationDir = shoulder.transform.position - (helper.transform.position+offset);
+                    targetRotationDir.x = 0;
+
                     Quaternion targetRot = Quaternion.LookRotation(-targetRotationDir);
                     helper.rotation = targetRot;
                 }

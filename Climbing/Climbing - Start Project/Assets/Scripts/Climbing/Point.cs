@@ -40,6 +40,23 @@ namespace Climbing
             }
             return retVal;
         }
+
+        public Neighbour ReturnNeighbour_FromDIrection(Vector3 dir)
+        {
+            Neighbour retval = null;
+
+            for(int i = 0; i < neighbours.Count; i++)
+            {
+                if (neighbours[i].direction == dir)
+                {
+                    retval = neighbours[i];
+                    break;
+                }
+            }
+
+            return retval;
+        }
+
     }
     [System.Serializable]
     public class IKPositions
@@ -54,6 +71,7 @@ namespace Climbing
         public Vector3 direction;
         public Point target;
         public ConnectionType cType;
+        public bool customConnection;
     }
     public enum ConnectionType
     {

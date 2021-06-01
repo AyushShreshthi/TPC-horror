@@ -174,6 +174,12 @@ namespace Climbing
         {
             float inf = aCurve.Evaluate(t);
             ik.AddWeightInfluenceAll(1 - inf);
+
+            if (curPoint.pointType == PointType.hanging)
+            {
+                ik.InfluenceWeight(AvatarIKGoal.LeftFoot, 0);
+                ik.InfluenceWeight(AvatarIKGoal.RightFoot, 0);
+            }
         }
 
         private void InitClimbing()
@@ -202,7 +208,7 @@ namespace Climbing
                 {
                     climbing = false;
                     initTransit = false;
-                    //ik.AddWeightInfluenceAll(0);
+                    ik.AddWeightInfluenceAll(0);
                     GetComponent<Controller.StateManager>().EnableController();
                     anim.SetBool("onAir", true);
                 }
@@ -235,10 +241,11 @@ namespace Climbing
 
                 transform.parent = curPoint.transform.parent;
 
-                //if (climbState == ClimbStates.onPoint)
-                //{
-                //    //ik.
-                //}
+                if (climbState == ClimbStates.onPoint)
+                {
+                    ik.UpdateAllTargetPositions(curPoint);
+                    ik.ImmediatePlaceHelpers();
+                }
 
             }
             else
@@ -402,6 +409,7 @@ namespace Climbing
         {
             if (targetPoint.pointType == PointType.hanging)
             {
+                print("feet direct");
                 ik.InfluenceWeight(AvatarIKGoal.LeftFoot, 0);
                 ik.InfluenceWeight(AvatarIKGoal.RightFoot, 0);
             }
@@ -498,7 +506,7 @@ namespace Climbing
                 rootReached = true;
             }
 
-            //HandleWeightAll(_t, a_jumpingCurve);
+            HandleWeightAll(_t, a_jumpingCurve);
 
             Vector3 targetPos = curCurve.GetPointAt(_t);
             transform.position = targetPos;
@@ -632,9 +640,16 @@ namespace Climbing
                 _fikT = 1;
                 ikFollowSideReached = true;
             }
-
-            Vector3 followSide = Vector3.LerpUnclamped(_ikStartPos[1], _ikTargetPos[1], _fikT);
-            ik.UpdateTargetPositions(ik_F, followSide);
+            if (targetPoint.pointType == PointType.hanging)
+            {
+                ik.InfluenceWeight(AvatarIKGoal.LeftFoot, 0);
+                ik.InfluenceWeight(AvatarIKGoal.RightFoot, 0);
+            }
+            else
+            {
+                Vector3 followSide = Vector3.LerpUnclamped(_ikStartPos[1], _ikTargetPos[1], _fikT);
+                ik.UpdateTargetPositions(ik_F, followSide);
+            }
         }
         #endregion
 
@@ -679,7 +694,7 @@ namespace Climbing
 
                 _distance = Vector3.Distance(_targetPos, _startPos);
 
-                //InitIK(directionToPoint, !twoStep);
+                InitIK(directionToPoint, !twoStep);
             }
         }
 
@@ -819,6 +834,26 @@ namespace Climbing
                     desiredPos = targetPoint.transform.position;
                     anim.SetInteger("JumpType", 20);
                     anim.SetBool("Move", true);
+                    break;
+                case ConnectionType.fall:
+                    climbing = false;
+                    initTransit = false;
+                    ik.AddWeightInfluenceAll(0);
+                    GetComponent<Controller.StateManager>().EnableController();
+                    anim.SetBool("OnAir", true);
+                    break;
+            }
+            switch (targetPoint.pointType)
+            {
+                case PointType.braced:
+                    anim.SetFloat("Stance", 0);
+                    break;
+                case PointType.hanging:
+                    anim.SetFloat("Stance", 1);
+                    ik.InfluenceWeight(AvatarIKGoal.LeftFoot, 0);
+                    ik.InfluenceWeight(AvatarIKGoal.RightFoot, 0);
+                    break;
+                default:
                     break;
             }
             targetPosition = desiredPos;

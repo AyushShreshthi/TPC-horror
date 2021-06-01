@@ -73,9 +73,33 @@ namespace Climbing
             }
             for (int i = 0; i < t.ConnectedPoints.Count; i++)
             {
-                Vector3 pos1 = t.ConnectedPoints[i].target1.transform.position;
+                Vector3 pos1 = Vector3.zero;
+                Vector3 pos2 = Vector3.zero;
 
-                Vector3 pos2 = t.ConnectedPoints[i].target2.transform.position;
+                if (t.ConnectedPoints[i].target1 == null || t.ConnectedPoints[i].target2 == null)
+                    continue;
+
+                switch (t.lineOrigin)
+                {
+                    case DrawLine.LineOrigin.hips:
+                        pos1 = t.ConnectedPoints[i].target1.transform.position;
+                        pos2 = t.ConnectedPoints[i].target2.transform.position;
+                        break;
+                    case DrawLine.LineOrigin.hands:
+                        pos1 = t.ConnectedPoints[i].target1.transform.parent.position;
+                        pos2 = t.ConnectedPoints[i].target2.transform.parent.position;
+                        break;
+                    case DrawLine.LineOrigin.root:
+                        pos1 = t.ConnectedPoints[i].target1.transform.position;
+                        pos2 = t.ConnectedPoints[i].target2.transform.position;
+                        pos1.y += -0.86f;
+                        pos2.y += -0.86f;
+                        break;
+                    default:
+                        break;
+
+
+                }
 
                 switch (t.ConnectedPoints[i].cType)
                 {
@@ -116,9 +140,30 @@ namespace Climbing
                     continue;
                 }
 
-                Vector3 pos1 = t.transform.position;
-                Vector3 pos2 = t.ConnectedPoints[i].target.transform.position;
+                Vector3 pos1 = Vector3.zero;
+                Vector3 pos2 = Vector3.zero;
 
+                switch (t.lineOrigin)
+                {
+                    case DrawLine.LineOrigin.hips:
+                        pos1 = t.transform.position;
+                        pos2 = t.ConnectedPoints[i].target.transform.position;
+                        break;
+                    case DrawLine.LineOrigin.hands:
+                        pos1 = t.transform.parent.position;
+                        pos2 = t.ConnectedPoints[i].target.transform.parent.position;
+                        break;
+                    case DrawLine.LineOrigin.root:
+                        pos1 = t.transform.position;
+                        pos2 = t.ConnectedPoints[i].target.transform.position;
+                        pos1.y += -0.86f;
+                        pos2.y += -0.86f;
+                        break;
+                    default:
+                        break;
+
+
+                }
                 switch (t.ConnectedPoints[i].cType)
                 {
                     case ConnectionType.direct:
