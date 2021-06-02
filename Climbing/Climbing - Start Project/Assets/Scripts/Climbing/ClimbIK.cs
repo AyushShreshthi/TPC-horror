@@ -339,6 +339,7 @@ namespace Climbing
 
                     Quaternion targetRot = Quaternion.LookRotation(-targetRotationDir);
                     helper.rotation = targetRot;
+
                 }
                 else
                 {
@@ -350,6 +351,7 @@ namespace Climbing
                     anim.SetIKHintPositionWeight(h, weight);
                     anim.SetIKHintPosition(h, holder.hint.position);
                 }
+                
             }
         }
 

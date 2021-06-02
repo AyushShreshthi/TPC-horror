@@ -11,6 +11,7 @@ namespace Controller
         public float vertical;
         public bool dummy;
         public bool onGround = true;
+        public bool isGroundForward;
 
         [HideInInspector]
         public HandleAnim hAnim;

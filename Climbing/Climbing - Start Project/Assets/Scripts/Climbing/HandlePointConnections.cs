@@ -266,7 +266,7 @@ namespace Climbing
                     Transform worldP = p.transform.parent;
                     GameObject dismountObject = Instantiate(dismountPrefab, worldP.position, worldP.rotation) as GameObject;
 
-                    Vector3 targetPosition = worldP.position + ((worldP.forward / 1.6f) + Vector3.up * 1.7f);
+                    Vector3 targetPosition = worldP.position + ((worldP.forward / 1.6f) + Vector3.up * 1.2f);
                     dismountObject.transform.position = targetPosition;
 
                     Point dismountPoint = dismountObject.GetComponentInChildren<Point>();
@@ -279,14 +279,14 @@ namespace Climbing
 
                     Neighbour n2 = new Neighbour();
                     n2.direction = -Vector3.up;
-                    n2.target = p;
+                    n2.target = dismountPoint;//p
                     n2.cType = ConnectionType.dismount;
-                    dismountPoint.neighbours.Add(n2);
+                    p.neighbours.Add(n2);
 
                     dismountObject.transform.parent = parentObj.transform;
 
                     RaycastHit hit;
-                    if(Physics.Raycast(dismountObject.transform.position,-Vector3.up,out hit, 2))
+                    if (Physics.Raycast(dismountObject.transform.position, -Vector3.up, out hit, 2))
                     {
                         Vector3 gp = hit.point;
                         gp.y += 0.04f + Mathf.Abs(dismountPoint.transform.localPosition.y);

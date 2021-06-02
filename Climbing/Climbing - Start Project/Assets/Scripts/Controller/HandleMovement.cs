@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections;
+using System;
 
 namespace Controller
 {
@@ -35,6 +36,9 @@ namespace Controller
             v.y = 0;
             h.y = 0;
 
+            bool isGround = isGroundTowarsDirection((v + h).normalized);
+            states.isGroundForward = isGround;
+
             if (states.onGround)
             {
                 rb.AddForce((v + h).normalized * Speed());
@@ -55,6 +59,11 @@ namespace Controller
                 Quaternion targetRot = Quaternion.LookRotation(targetDir);
                 transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, rotateSpeed * Time.deltaTime);
             }
+        }
+
+        private bool isGroundTowarsDirection(Vector3 dir)
+        {
+            return false;
         }
 
         float Speed()

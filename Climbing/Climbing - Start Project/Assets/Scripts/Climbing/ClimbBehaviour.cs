@@ -80,6 +80,7 @@ namespace Climbing
             mountCurve = curveHolder.ReturnCurve(CurveType.mount);
 
         }
+
         private void Start()
         {
             anim = GetComponentInChildren<Animator>();
@@ -163,11 +164,15 @@ namespace Climbing
             Vector3 targetDir = targetPoint.transform.position;
 
             if (targetDir == Vector3.zero)
+            {
+                print("transform");
                 targetDir = transform.position;
+            }
 
-            Quaternion targetRot = Quaternion.LookRotation(targetDir);
+            Quaternion targetRot = Quaternion.LookRotation(Vector3.zero,targetDir);
 
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 5);
+
         }
 
         private void HandleWeightAll(float t, AnimationCurve aCurve)
@@ -279,8 +284,6 @@ namespace Climbing
             }
         }
         #endregion
-
-        #region InTransition Functions
 
         #region Dismount
         private void DismountWrapUp()
@@ -409,7 +412,6 @@ namespace Climbing
         {
             if (targetPoint.pointType == PointType.hanging)
             {
-                print("feet direct");
                 ik.InfluenceWeight(AvatarIKGoal.LeftFoot, 0);
                 ik.InfluenceWeight(AvatarIKGoal.RightFoot, 0);
             }
@@ -557,7 +559,7 @@ namespace Climbing
                 points[points.Length - 1].transform.position = _targetPos;
 
                 
-                InitIK_Direct(inputDirection);
+               InitIK_Direct(inputDirection);
             }
         }
 
@@ -582,12 +584,9 @@ namespace Climbing
             }
 
         }
+        #endregion
 
-        private void InitIKOpposite()
-        {
-            UpdateIKTarget(2, ik.ReturnOppositeIK(ik_L), targetPoint);
-            UpdateIKTarget(3, ik.ReturnOppositeIK(ik_F), targetPoint);
-        }
+        #region WrapUp
 
         private void WrapUp(bool direct=false)
         {
@@ -618,6 +617,10 @@ namespace Climbing
             inputDirection = Vector3.zero;
             waitForWrapUp = false;
         }
+
+        #endregion
+
+        #region Linear
         private void LerpIKLandingSide_Linear()
         {
             float speed = speed_linear * Time.deltaTime;
@@ -651,9 +654,7 @@ namespace Climbing
                 ik.UpdateTargetPositions(ik_F, followSide);
             }
         }
-        #endregion
-
-        #region InBetween
+       
         private void Linear_RootMovement()
         {
             float speed = speed_linear * Time.deltaTime;
@@ -689,13 +690,34 @@ namespace Climbing
 
                 bool twoStep = (targetState == ClimbStates.betweenPoints);
                 Vector3 back = -transform.forward * 0.05f;
-                if (twoStep)
+
+                bool diffType = targetPoint.pointType != curPoint.pointType;
+                Vector3 down = -transform.up * 0.2f;
+
+                if (diffType)
+                {
+                    if (curPoint.pointType == PointType.hanging)
+                        diffType = false;
+                }
+
+                if (diffType && twoStep)
+                    _targetPos += down;
+                else if (twoStep)
                     _targetPos += back;
 
                 _distance = Vector3.Distance(_targetPos, _startPos);
 
                 InitIK(directionToPoint, !twoStep);
             }
+        }
+
+        #endregion
+
+        #region IKS
+        private void InitIKOpposite()
+        {
+            UpdateIKTarget(2, ik.ReturnOppositeIK(ik_L), targetPoint);
+            UpdateIKTarget(3, ik.ReturnOppositeIK(ik_F), targetPoint);
         }
 
         private void InitIK(Vector3 directionToPoint, bool opposite)
@@ -756,16 +778,15 @@ namespace Climbing
             ik.UpdatePoint(_ikGoal, tp);
         }
 
-
-        #endregion
-
-        #endregion
         AvatarIKGoal ik_L;
         AvatarIKGoal ik_F;
         float _ikT;
         float _fikT;
         Vector3[] _ikStartPos = new Vector3[4];
         Vector3[] _ikTargetPos = new Vector3[4];
+
+        #endregion
+
         #region Others
         private void BetweenPoints(Vector3 inD)
         {
