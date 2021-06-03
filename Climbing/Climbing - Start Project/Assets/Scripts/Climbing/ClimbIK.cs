@@ -327,16 +327,16 @@ namespace Climbing
                 if (ik == AvatarIKGoal.LeftHand || ik == AvatarIKGoal.RightHand)
                 {
                     Transform shoulder = (ik == AvatarIKGoal.LeftHand) ?
-                        anim.GetBoneTransform(HumanBodyBones.LeftShoulder) ://leftshoulder
-                        anim.GetBoneTransform(HumanBodyBones.RightShoulder);//rightshoulder
+                        anim.GetBoneTransform(HumanBodyBones.LeftShoulder) :
+                        anim.GetBoneTransform(HumanBodyBones.RightShoulder);
 
                     Vector3 offset = Vector3.zero;
                     offset += transform.forward;
-                    offset += Vector3.up / 2;
+                    offset += transform.up * 2.2f;
+                    offset += transform.position;
 
-                    Vector3 targetRotationDir = shoulder.transform.position - (helper.transform.position+offset);
-                    targetRotationDir.x = 0;
-
+                    Vector3 targetRotationDir = shoulder.transform.position - offset;
+                   
                     Quaternion targetRot = Quaternion.LookRotation(-targetRotationDir);
                     helper.rotation = targetRot;
 

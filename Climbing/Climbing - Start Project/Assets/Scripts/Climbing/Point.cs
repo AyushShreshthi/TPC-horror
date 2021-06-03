@@ -8,6 +8,7 @@ namespace Climbing
     public class Point : MonoBehaviour
     {
         public PointType pointType;
+        public bool dismountPoint;
         public List<Neighbour> neighbours = new List<Neighbour>();
         public List<IKPositions> iks = new List<IKPositions>();
 

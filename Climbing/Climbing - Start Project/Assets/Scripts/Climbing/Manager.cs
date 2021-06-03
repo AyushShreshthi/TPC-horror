@@ -66,6 +66,9 @@ namespace Climbing
             {
                 float dist = Vector3.Distance(allPoints[i].transform.position, from);
 
+                if(allPoints[i].dismountPoint)
+                      continue;
+
                 if (dist < minDist)
                 {
                     retVal = allPoints[i];

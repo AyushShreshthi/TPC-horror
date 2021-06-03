@@ -41,7 +41,10 @@ namespace Controller
 
             if (states.onGround)
             {
-                rb.AddForce((v + h).normalized * Speed());
+                if (isGround)
+                    rb.AddForce((v + h).normalized * Speed());
+                else
+                    rb.velocity = Vector3.zero;
             }
 
             if(Mathf.Abs(states.vertical) > 0 || Mathf.Abs(states.horizontal) > 0)
@@ -63,7 +66,34 @@ namespace Controller
 
         private bool isGroundTowarsDirection(Vector3 dir)
         {
-            return false;
+            bool retVal = false;
+
+            Vector3 origin = dir;
+            float offset = 0.5f;
+            origin *= offset;
+            origin += Vector3.up / 2;
+            origin += transform.position;
+
+            bool forward = DoRayCast(origin, -Vector3.up);
+
+            retVal = forward;
+
+            if (Input.GetKey(KeyCode.LeftShift))
+                retVal = true;
+
+            return retVal;
+        }
+
+        private bool DoRayCast(Vector3 origin, Vector3 direction)
+        {
+            bool retVal = false;
+            RaycastHit hit;
+
+            if(Physics.Raycast(origin,direction,out hit, 1))
+            {
+                retVal = true;
+            }
+            return retVal;
         }
 
         float Speed()

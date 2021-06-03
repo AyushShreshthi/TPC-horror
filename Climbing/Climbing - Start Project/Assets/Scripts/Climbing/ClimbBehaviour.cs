@@ -2,6 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Controller;
+
 namespace Climbing
 {
     public class ClimbBehaviour : MonoBehaviour
@@ -11,6 +13,7 @@ namespace Climbing
         bool initClimb;
         bool waitToStartClimb;
         bool waitForWrapUp;
+        bool dropOnLedge;
 
         Animator anim;
         ClimbIK ik;
@@ -24,6 +27,7 @@ namespace Climbing
 
         ClimbStates climbState;
         ClimbStates targetState;
+        StateManager states;
 
         public enum ClimbStates
         {
@@ -32,15 +36,8 @@ namespace Climbing
             inTransit
         }
 
-        #region Curves
         CurvesHolder curveHolder;
-        BezierCurve directCurveHorizontal;
-        BezierCurve directCurveVertical;
-        BezierCurve dismountCurve;
-        BezierCurve mountCurve;
         BezierCurve curCurve;
-
-        #endregion
 
         Vector3 _startPos;
         Vector3 _targetPos;
@@ -58,9 +55,12 @@ namespace Climbing
         public Vector3 rootOffset = new Vector3(0, -0.86f, 0);
         public float speed_linear = 1.3f;
         public float speed_direct = 2;
+        public float speed_dropLedge = 1.5f;
 
         public AnimationCurve a_jumpingCurve;
+        public AnimationCurve a_hangingToBrace;
         public AnimationCurve a_mountCurve;
+        public AnimationCurve a_zeroToOne;
         public bool enableRootMovement;
         float _rmMax = 0.25f;
         float _rmT;
@@ -74,21 +74,17 @@ namespace Climbing
 
             curveHolder = chGO.GetComponent<CurvesHolder>();
 
-            directCurveHorizontal = curveHolder.ReturnCurve(CurveType.horizontal);
-            directCurveVertical = curveHolder.ReturnCurve(CurveType.vertical);
-            dismountCurve = curveHolder.ReturnCurve(CurveType.dismount);
-            mountCurve = curveHolder.ReturnCurve(CurveType.mount);
-
         }
 
-        private void Start()
+        public void Start()
         {
+            states = GetComponent<Controller.StateManager>();
             anim = GetComponentInChildren<Animator>();
             ik = GetComponentInChildren<ClimbIK>();
             SetCurveReferences();
         }
 
-        private void FixedUpdate()
+        public void FixedUpdate()
         {
             if (climbing)
             {
@@ -115,6 +111,54 @@ namespace Climbing
                 {
                     LookForClimbSpot();
                 }
+                CharacterOnEdge();
+            }
+        }
+
+        private void CharacterOnEdge()
+        {
+            if (!states.isGroundForward)
+            {
+                Vector3 origin = transform.position;
+                origin += transform.forward;
+                origin -= Vector3.up / 3;
+                Vector3 direction = transform.position - origin;
+                direction.y = 0;
+                RaycastHit hit;
+
+                LayerMask lm = (1 << gameObject.layer)|(1 << 3);
+                lm = ~lm;
+
+                Debug.DrawRay(origin, direction,Color.red,5);
+
+                if(Physics.Raycast(origin,direction,out hit, 1, lm))
+                {
+                    if (hit.transform.GetComponentInParent<Manager>())
+                    {
+                        Manager tm = hit.transform.GetComponentInParent<Manager>();
+
+                        Point closestPoint = tm.ReturnClosest(transform.position);
+
+                        float distanceToPoint = Vector3.Distance(transform.position, closestPoint.transform.parent.position);
+
+                        if (distanceToPoint < 5)
+                        {
+                            if (Input.GetKey(KeyCode.Space))
+                            {
+                                curManager = tm;
+                                targetPoint = closestPoint;
+                                targetPosition = closestPoint.transform.position;
+                                curPoint = closestPoint;
+                                climbing = true;
+                                lockInput = true;
+                                dropOnLedge = true;
+                                GetComponent<Controller.StateManager>().DisableController();
+                                waitToStartClimb = true;
+
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -130,11 +174,18 @@ namespace Climbing
                 _startPos = transform.position;
                 _targetPos = targetPosition + rootOffset;
 
-                curCurve = mountCurve;
+                curCurve = (dropOnLedge) ? curveHolder.ReturnCurve(CurveType.dropLedge)
+                    : curveHolder.ReturnCurve(CurveType.mount);
+
                 curCurve.transform.rotation = targetPoint.transform.rotation;
                 BezierPoint[] points = curCurve.GetAnchorPoints();
                 points[0].transform.position = _startPos;
                 points[points.Length - 1].transform.position = _targetPos;
+
+                if (dropOnLedge)
+                    anim.CrossFade("dropLedge", 0.4f);
+
+                dropOnLedge = false;
             }
             if (enableRootMovement)
             {
@@ -151,10 +202,10 @@ namespace Climbing
             
             }
 
-            HandleWeightAll(_t, a_mountCurve);
-
             Vector3 targetPos = curCurve.GetPointAt(_t);
             transform.position = targetPos;
+
+            HandleWeightAll(_t, a_mountCurve);
 
             HandleRotation();
         }
@@ -178,12 +229,14 @@ namespace Climbing
         private void HandleWeightAll(float t, AnimationCurve aCurve)
         {
             float inf = aCurve.Evaluate(t);
-            ik.AddWeightInfluenceAll(1 - inf);
+            ik.AddWeightInfluenceAll(1- inf);//1-inf
 
-            if (curPoint.pointType == PointType.hanging)
+            if (curPoint.pointType == PointType.hanging && targetPoint.pointType==PointType.braced)
             {
-                ik.InfluenceWeight(AvatarIKGoal.LeftFoot, 0);
-                ik.InfluenceWeight(AvatarIKGoal.RightFoot, 0);
+                float inf2 = a_zeroToOne.Evaluate(t);
+
+                ik.InfluenceWeight(AvatarIKGoal.LeftFoot, inf2);
+                ik.InfluenceWeight(AvatarIKGoal.RightFoot, inf2);
             }
         }
 
@@ -202,6 +255,8 @@ namespace Climbing
 
                 curConnection = ConnectionType.direct;
                 targetState = ClimbStates.onPoint;
+                anim.SetBool("Move", false);
+                anim.SetInteger("JumpType", 0);
             }
         }
 
@@ -364,7 +419,7 @@ namespace Climbing
                 _startPos = transform.position;
                 _targetPos = targetPosition;
 
-                curCurve = dismountCurve;
+                curCurve = curveHolder.ReturnCurve(CurveType.dismount);
                 BezierPoint[] points = curCurve.GetAnchorPoints();
                 curCurve.transform.rotation = transform.rotation;
                 points[0].transform.position = _startPos;
@@ -531,36 +586,47 @@ namespace Climbing
                 _startPos = transform.position;
 
                 bool vertical = (Mathf.Abs(inpD.y) > 0.1f);
-                curCurve = (vertical) ? directCurveVertical : directCurveHorizontal;
+                curCurve = FindCurveByInput(vertical, inpD);
                 curCurve.transform.rotation = curPoint.transform.rotation;
-
-                if (!vertical)
-                {
-                    if (!(inpD.x > 0))
-                    {
-                        Vector3 eulers = curCurve.transform.eulerAngles;
-                        eulers.y = -180;
-                        curCurve.transform.eulerAngles = eulers;
-                    }
-                }
-                else
-                {
-                    if (!(inpD.y > 0))
-                    {
-                        Vector3 eulers = curCurve.transform.eulerAngles;
-                        eulers.x = 180;
-                        eulers.y = 180;
-                        curCurve.transform.eulerAngles = eulers;
-                    }
-                }
 
                 BezierPoint[] points = curCurve.GetAnchorPoints();
                 points[0].transform.position = _startPos;
                 points[points.Length - 1].transform.position = _targetPos;
 
-                
-               InitIK_Direct(inputDirection);
+                InitIK_Direct(inputDirection);
             }
+        }
+
+        private BezierCurve FindCurveByInput(bool vertical, Vector3 inpd)
+        {
+            BezierCurve retVal = null;
+
+            if (!vertical)
+            {
+                if (inpd.x > 0)
+                {
+                    retVal = curveHolder.ReturnCurve(CurveType.right);
+
+                }
+                else
+                {
+                    retVal = curveHolder.ReturnCurve(CurveType.left);
+
+                }
+            }
+            else
+            {
+                if (inpd.y > 0)
+                {
+                    retVal = curveHolder.ReturnCurve(CurveType.up);
+                }
+                else
+                {
+                    retVal = curveHolder.ReturnCurve(CurveType.down);
+
+                }
+            }
+            return retVal;
         }
 
         private void InitIK_Direct(Vector3 directionToPoint)
@@ -848,7 +914,7 @@ namespace Climbing
                     desiredPos = targetPoint.transform.position;
 
                     targetState = ClimbStates.onPoint;
-                    TransitDir transitDir2 = ReturnTransitDirection(direction, true);
+                    TransitDir transitDir2 = ReturnTransitDirection(inputD, true);
                     PlayAnim(transitDir2,true);
                     break;
                 case ConnectionType.dismount:
@@ -861,7 +927,7 @@ namespace Climbing
                     initTransit = false;
                     ik.AddWeightInfluenceAll(0);
                     GetComponent<Controller.StateManager>().EnableController();
-                    anim.SetBool("OnAir", true);
+                    anim.SetBool("onAir", true);
                     break;
             }
             switch (targetPoint.pointType)

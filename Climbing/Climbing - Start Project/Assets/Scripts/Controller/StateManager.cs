@@ -17,11 +17,13 @@ namespace Controller
         public HandleAnim hAnim;
         [HideInInspector]
         public HandleMovement hMovement;
+        public Climbing.ClimbBehaviour cbehave;
 
         void Start()
         {
             hAnim = GetComponent<HandleAnim>();
             hMovement = GetComponent<HandleMovement>();
+            cbehave = GetComponent<Climbing.ClimbBehaviour>();
 
             hAnim.Init(this);
             hMovement.Init();

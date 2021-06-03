@@ -86,15 +86,28 @@ namespace Climbing
                     canidates.AddRange(hp[i].pointsInOrder);
                 }
             }
+            Point[] ps = GetComponentsInChildren<Point>();
+
+            foreach(Point p in ps)
+            {
+                if (p.pointType == PointType.hanging)
+                {
+                    if (!canidates.Contains(p))
+                    {
+                        canidates.Add(p);
+                    }
+                }
+            }
+
             if (canidates.Count > 0)
             {
                 foreach(Point p in canidates)
                 {
                     p.pointType = PointType.hanging;
 
-                    Vector3 targetP = Vector3.zero;
-                    targetP.y = -1.5f;
-                    p.transform.localPosition = targetP;
+                   // Vector3 targetP = Vector3.zero;
+                    //targetP.y = -1f;
+                    //p.transform.localPosition = targetP;
                 }
             }
         }
@@ -103,7 +116,7 @@ namespace Climbing
         {
             foreach(GameObject go in dismountPoints)
             {
-                Destroy(go);
+                DestroyImmediate(go);
             }
             dismountPoints.Clear();
         }
@@ -245,11 +258,23 @@ namespace Climbing
 
             List<Point> canidates = new List<Point>();
 
+            Point[] disPoint = GetComponentsInChildren<Point>();
+
             for(int i = 0; i < hp.Length; i++)
             {
                 if (hp[i].dismountPoint)
                 {
                     canidates.AddRange(hp[i].pointsInOrder);
+                }
+            }
+            for(int i = 0; i < disPoint.Length; i++)
+            {
+                if (disPoint[i].dismountPoint)
+                {
+                    if (!canidates.Contains(disPoint[i]))
+                    {
+                        canidates.Add(disPoint[i]);
+                    }
                 }
             }
 
@@ -282,6 +307,8 @@ namespace Climbing
                     n2.target = dismountPoint;//p
                     n2.cType = ConnectionType.dismount;
                     p.neighbours.Add(n2);
+
+                    dismountPoint.dismountPoint = true;
 
                     dismountObject.transform.parent = parentObj.transform;
 

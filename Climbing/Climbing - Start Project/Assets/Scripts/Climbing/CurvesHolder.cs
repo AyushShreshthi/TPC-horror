@@ -34,9 +34,12 @@ namespace Climbing
 
     public enum CurveType
     {
-        horizontal,
-        vertical,
+        up,
+        down,
+        left,
+        right,
         dismount,
-        mount
+        mount,
+        dropLedge
     }
 }
