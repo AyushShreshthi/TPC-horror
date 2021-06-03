@@ -40,6 +40,8 @@ namespace Climbing
         right,
         dismount,
         mount,
-        dropLedge
+        dropLedge,
+        back,
+        forward
     }
 }

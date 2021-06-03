@@ -10,6 +10,9 @@ namespace Climbing
     {
         #region Variables
         public bool climbing;
+        public bool lookOnZ;
+        public float directThreshold = 1;
+        public float minDistance = 2.5f;
         bool initClimb;
         bool waitToStartClimb;
         bool waitForWrapUp;
@@ -17,6 +20,7 @@ namespace Climbing
 
         Animator anim;
         ClimbIK ik;
+        StateManager states;
 
         Manager curManager;
         Point targetPoint;
@@ -24,10 +28,12 @@ namespace Climbing
         Point prevPoint;
         Neighbour neighbour;
         ConnectionType curConnection;
+        GameObject dismountPointGO;
+        Neighbour dismountNeighbour;
+        Neighbour fallNeighbour;
 
         ClimbStates climbState;
         ClimbStates targetState;
-        StateManager states;
 
         public enum ClimbStates
         {
@@ -65,6 +71,8 @@ namespace Climbing
         float _rmMax = 0.25f;
         float _rmT;
 
+        LayerMask lm;
+
         #endregion
 
         void SetCurveReferences()
@@ -82,6 +90,21 @@ namespace Climbing
             anim = GetComponentInChildren<Animator>();
             ik = GetComponentInChildren<ClimbIK>();
             SetCurveReferences();
+            CreateDirections();
+
+            GameObject disPrefab = Resources.Load("Dismount") as GameObject;
+            dismountPointGO = Instantiate(disPrefab) as GameObject;
+            dismountNeighbour = new Neighbour();
+            dismountNeighbour.target = dismountPointGO.GetComponentInChildren<Point>();
+            dismountNeighbour.target.dismountPoint = true;
+            dismountNeighbour.cType = ConnectionType.dismount;
+
+            fallNeighbour = new Neighbour();
+            fallNeighbour.cType = ConnectionType.fall;
+
+            lm = (1 << gameObject.layer) | (1 << 3);
+            lm = ~lm;
+
         }
 
         public void FixedUpdate()
@@ -126,9 +149,6 @@ namespace Climbing
                 direction.y = 0;
                 RaycastHit hit;
 
-                LayerMask lm = (1 << gameObject.layer)|(1 << 3);
-                lm = ~lm;
-
                 Debug.DrawRay(origin, direction,Color.red,5);
 
                 if(Physics.Raycast(origin,direction,out hit, 1, lm))
@@ -161,6 +181,282 @@ namespace Climbing
                 }
             }
         }
+
+
+        #region Neighbour Manager
+
+        Vector3[] availableDirections; 
+        void CreateDirections()
+        {
+            availableDirections = new Vector3[10];
+            availableDirections[0] = new Vector3(1, 0, 0);
+            availableDirections[1] = new Vector3(-1, 0, 0);
+            availableDirections[2] = new Vector3(0, 1, 0);
+            availableDirections[3] = new Vector3(0, -1, 0);
+            availableDirections[4] = new Vector3(-1, -1, 0);
+            availableDirections[5] = new Vector3(1, 1, 0);
+            availableDirections[6] = new Vector3(1, -1, 0);
+            availableDirections[7] = new Vector3(-1, 1, 0);
+            availableDirections[8] = new Vector3(0, 0, -1);
+            availableDirections[9] = new Vector3(0, 0, 1);
+        }
+
+        Neighbour ReturnNeighbour(Vector3 inpd,Point curPoint,Manager m)
+        {
+            if (m == null)
+                return null;
+
+            Neighbour retVal = null;
+
+            Neighbour n = new Neighbour();
+
+            curManager = m;
+            Point tp = NeighbourPoint(inpd, curPoint, curManager);
+
+            if (tp == null)
+            {
+                return null;
+            }
+
+            n.target = tp;
+
+            float distance = Vector3.Distance(curPoint.transform.position, tp.transform.position);
+
+            if (!lookOnZ)
+            {
+                if (distance < minDistance)
+                {
+                    n.cType = (distance < directThreshold) ? ConnectionType.inBetween : ConnectionType.direct;
+
+                    if(n.cType==ConnectionType.direct&& inpd.x != 0 && inpd.y!=0)
+                    {
+                        return null;
+                    }
+                }
+                else
+                {
+                    return null;
+                }
+            }
+            else
+            {
+                n.cType = ConnectionType.direct;
+            }
+
+            retVal = n;
+
+            return retVal;
+        }
+
+        private Point NeighbourPoint(Vector3 targetDirection, Point from, Manager m)
+        {
+            Point retVal = null;
+
+            List<Point> canidates = CanidatePointsOnDirection(targetDirection, from, m);
+
+            retVal = ReturnClosest(from, canidates);
+
+            return retVal;
+        }
+
+        private Point ReturnClosest(Point cp, List<Point> l)
+        {
+            Point retVal = null;
+            float minDist = Mathf.Infinity;
+
+            for(int i = 0; i < l.Count; i++)
+            {
+                float tempDist = Vector3.Distance(cp.transform.position, l[i].transform.position);
+
+                if(tempDist<minDist && l[i] != cp)
+                {
+                    minDist = tempDist;
+                    retVal = l[i];
+                }
+            }
+            return retVal;
+        }
+
+        private List<Point> CanidatePointsOnDirection(Vector3 targetDirection, Point from, Manager m)
+        {
+            List<Point> retval = new List<Point>();
+
+            for(int p = 0; p < m.allPoints.Count; p++)
+            {
+                Point targetPoint = m.allPoints[p];
+
+                if (targetPoint == from)
+                    continue;
+
+                Vector3 relativePosition = from.transform.InverseTransformPoint(targetPoint.transform.position);
+
+                if (IsDirectionValid(targetDirection, relativePosition))
+                {
+                    retval.Add(targetPoint);
+                }
+            }
+            return retval;
+        }
+
+        private bool IsDirectionValid(Vector3 targetDirection, Vector3 canidate)
+        {
+            bool retVal = false;
+
+            float targetAngle = Mathf.Atan2(targetDirection.x, targetDirection.y) * Mathf.Rad2Deg;
+            float angle = Mathf.Atan2(canidate.x, canidate.y) * Mathf.Rad2Deg;
+
+            if (targetDirection.y != 0)
+            {
+                targetAngle = Mathf.Abs(targetAngle);
+                angle = Mathf.Abs(angle);
+            }
+
+            if (targetDirection.z != 0)
+            {
+                targetAngle = Mathf.Abs(Mathf.Atan2(targetDirection.x, targetDirection.z) * Mathf.Rad2Deg);
+                angle = Mathf.Abs(Mathf.Atan2(canidate.x, canidate.z) * Mathf.Rad2Deg);
+
+                if (angle < targetAngle + 22.5f && angle > targetAngle - 22.5f)
+                {
+                    retVal = true;
+                }
+            }
+            else
+            {
+                if (angle < targetAngle + 22.5f && angle > targetAngle - 22.5f)
+                {
+                    retVal = true;
+                }
+            }
+            return retVal;
+        }
+
+        Manager LookForManagerBehind()
+        {
+            Manager retVal = null;
+
+            RaycastHit hit;
+            Vector3 origin = transform.position;
+            Vector3 direction = -transform.forward;
+
+            Debug.DrawRay(origin, direction * 5);
+
+            if(Physics.Raycast(origin,direction,out hit, 5, lm))
+            {
+                if (hit.transform.GetComponentInChildren<Manager>())
+                {
+                    retVal = hit.transform.GetComponentInChildren<Manager>();
+                }
+            }
+
+
+            return retVal;
+        }
+
+        bool CanDismount()
+        {
+            bool retVal = false;
+
+            Vector3 worldP = curPoint.transform.position;
+            Vector3 aboveOrigin = worldP - transform.forward;
+
+            bool above = GetHit(aboveOrigin, Vector3.up, 1.5f, lm);
+
+            if (!above)
+            {
+                Vector3 forwardOrigin = aboveOrigin + Vector3.up * 2;
+
+                Debug.DrawRay(forwardOrigin, transform.forward * 2, Color.yellow);
+                bool forward = GetHit(forwardOrigin, transform.forward, 2, lm);
+
+                if (!forward)
+                {
+                    Vector3 disOrigin = worldP + (transform.forward + Vector3.up * 2);
+                    RaycastHit hit;
+
+                    Debug.DrawRay(disOrigin, -Vector3.up * 2, Color.green);
+
+                    if(Physics.Raycast(disOrigin,-Vector3.up,out hit, 2))
+                    {
+                        Vector3 gp = hit.point;
+                        gp.y += 0.04f + Mathf.Abs(dismountNeighbour.target.transform.localPosition.y);
+
+                        dismountPointGO.transform.position = gp;
+                        dismountPointGO.transform.rotation = transform.rotation;
+                        retVal = true;
+                    }
+                }
+
+            }
+            return retVal;
+        }
+
+        private bool GetHit(Vector3 origin, Vector3 direction, float dis, LayerMask lm)
+        {
+            bool retVal = false;
+
+            RaycastHit hit;
+
+            if(Physics.Raycast(origin,direction,out hit, dis, lm))
+            {
+                retVal = true;
+            }
+            return retVal;
+        }
+
+        bool CanFall()
+        {
+            bool retVal = false;
+            RaycastHit hit;
+            if(Physics.Raycast(curPoint.transform.position,-Vector3.up,out hit, 3, lm))
+            {
+                retVal = true;
+            }
+            return retVal;
+        }
+
+        void FixHipPositions(Point p)
+        {
+            if (p.pointType == PointType.hanging)
+            {
+                Vector3 targetP = Vector3.zero;
+                targetP.y = -1.5f;
+                p.transform.localPosition = targetP;
+            }
+            if (p.pointType == PointType.braced)
+            {
+                Vector3 targetP = Vector3.zero;
+                targetP.y = -1.06f;
+                targetP.z = -0.3703f;
+                p.transform.localPosition = targetP;
+            }
+        }
+
+        Manager LookForManagerSides(float x)
+        {
+            Manager retVal = null;
+
+            RaycastHit hit;
+            Vector3 origin = transform.position + -transform.forward;
+            Vector3 direction = transform.right * x;
+
+            Debug.DrawRay(origin, direction * 5);
+
+            bool hitSides = GetHit(origin, direction, 2, lm);
+            if (hitSides == false)
+            {
+                Debug.Log("f");
+                Vector3 towardsOrigin = origin + transform.right;
+
+                if(Physics.Raycast(towardsOrigin,transform.forward,out hit, 5, lm))
+                {
+                    retVal = hit.transform.root.GetComponentInChildren<Manager>();
+                }
+            }
+            return retVal;
+        }
+
+        #endregion
 
         #region Mains
         private void HandleMount()
@@ -279,6 +575,8 @@ namespace Climbing
         {
             if (!lockInput)
             {
+                lookOnZ = Input.GetKey(KeyCode.LeftShift);
+
                 inputDirection = Vector3.zero;
 
                 float h = Input.GetAxis("Horizontal");
@@ -879,10 +1177,49 @@ namespace Climbing
         private void OnPoint(Vector3 inD)
         {
             neighbour = null;
-            neighbour = curManager.ReturnNeighour(inD, curPoint);
 
-            if (neighbour != null)
+            Manager targetManager = curManager;
+
+            if (lookOnZ)
             {
+                inD.z = inD.y;
+                inD.y = 0;
+                targetManager = LookForManagerBehind();
+            }
+
+            neighbour = ReturnNeighbour(inD, curPoint,targetManager);
+
+            if(neighbour==null && !lookOnZ)
+            {
+                if (inD.y > 0)
+                {
+                    if (CanDismount())
+                    {
+                        neighbour = dismountNeighbour;
+                    }
+                }
+                if (inD.y < 0)
+                {
+                    if (CanFall())
+                    {
+                        fallNeighbour.target = curPoint;
+                        neighbour = fallNeighbour;
+                    }
+                }
+                if (inD.x != 0)
+                {
+                    Manager managerSides = LookForManagerSides(inputDirection.x);
+
+                    if (managerSides != null)
+                    {
+                        neighbour = ReturnNeighbour(inD, curPoint, managerSides);
+                    }
+                }
+            }
+            if (neighbour != null )
+            {
+                FixHipPositions(neighbour.target);
+
                 targetPoint = neighbour.target;
                 prevPoint = curPoint;
                 climbState = ClimbStates.inTransit;
@@ -954,12 +1291,6 @@ namespace Climbing
             int v = (vertical != 0) ? (vertical < 0) ?
                 -1 : 1 : 0;
 
-            int z = v + h;
-
-            z = (z != 0) ?
-                (z < 0) ? -1 : 1:
-                 0;
-
             Vector3 retVal = Vector3.zero;
             retVal.x = h;
             retVal.y = v;
@@ -973,8 +1304,6 @@ namespace Climbing
             Ray ray = new Ray(camTrans.position, camTrans.forward);
 
             RaycastHit hit;
-            LayerMask lm = (1 << gameObject.layer) | (1 << 3);
-            lm = ~lm;
 
             float maxDistance = 20;
 
