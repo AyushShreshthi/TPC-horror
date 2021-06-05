@@ -21,7 +21,7 @@ namespace Climbing
 
             foreach(Point p in allP)
             {
-                if (!allPoints.Contains(p))
+                if (!allPoints.Contains(p) && !p.dismountPoint)
                 {
                     allPoints.Add(p);
                 }

@@ -79,7 +79,8 @@ namespace Climbing
         inBetween,
         direct,
         dismount,
-        fall
+        fall,
+        jumpBack
     }
     public enum PointType
     {

@@ -45,22 +45,23 @@ namespace Controller
                     rb.AddForce((v + h).normalized * Speed());
                 else
                     rb.velocity = Vector3.zero;
-            }
 
-            if(Mathf.Abs(states.vertical) > 0 || Mathf.Abs(states.horizontal) > 0)
-            {
-                storeDirection = (v + h).normalized;
 
-                storeDirection += transform.position;
+                if (Mathf.Abs(states.vertical) > 0 || Mathf.Abs(states.horizontal) > 0)
+                {
+                    storeDirection = (v + h).normalized;
 
-                Vector3 targetDir = (storeDirection - transform.position).normalized;
-                targetDir.y = 0;
+                    storeDirection += transform.position;
 
-                if (targetDir == Vector3.zero)
-                    targetDir = transform.forward;
+                    Vector3 targetDir = (storeDirection - transform.position).normalized;
+                    targetDir.y = 0;
 
-                Quaternion targetRot = Quaternion.LookRotation(targetDir);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, rotateSpeed * Time.deltaTime);
+                    if (targetDir == Vector3.zero)
+                        targetDir = transform.forward;
+
+                    Quaternion targetRot = Quaternion.LookRotation(targetDir);
+                    transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, rotateSpeed * Time.deltaTime);
+                }
             }
         }
 

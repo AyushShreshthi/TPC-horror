@@ -14,9 +14,11 @@ namespace Climbing
         public float directThreshold = 1;
         public float minDistance = 2.5f;
         bool initClimb;
+        bool hold;
         bool waitToStartClimb;
         bool waitForWrapUp;
         bool dropOnLedge;
+        bool hasRootmotion;
 
         Animator anim;
         ClimbIK ik;
@@ -31,6 +33,7 @@ namespace Climbing
         GameObject dismountPointGO;
         Neighbour dismountNeighbour;
         Neighbour fallNeighbour;
+        Neighbour jumpBackNeighbour;
 
         ClimbStates climbState;
         ClimbStates targetState;
@@ -102,6 +105,9 @@ namespace Climbing
             fallNeighbour = new Neighbour();
             fallNeighbour.cType = ConnectionType.fall;
 
+            jumpBackNeighbour = new Neighbour();
+            jumpBackNeighbour.cType = ConnectionType.jumpBack;
+
             lm = (1 << gameObject.layer) | (1 << 3);
             lm = ~lm;
 
@@ -113,8 +119,11 @@ namespace Climbing
             {
                 if (!waitToStartClimb)
                 {
-                    HandleClimbing();
-                    InititateFallOff();
+                    if (!hold)
+                    {
+                        HandleClimbing();
+                        InititateFallOff();
+                    }
                 }
                 else
                 {
@@ -153,9 +162,9 @@ namespace Climbing
 
                 if(Physics.Raycast(origin,direction,out hit, 1, lm))
                 {
-                    if (hit.transform.GetComponentInParent<Manager>())
+                    if (hit.transform.GetComponentInChildren<Manager>())
                     {
-                        Manager tm = hit.transform.GetComponentInParent<Manager>();
+                        Manager tm = hit.transform.GetComponentInChildren<Manager>();
 
                         Point closestPoint = tm.ReturnClosest(transform.position);
 
@@ -172,9 +181,12 @@ namespace Climbing
                                 climbing = true;
                                 lockInput = true;
                                 dropOnLedge = true;
-                                GetComponent<Controller.StateManager>().DisableController();
+                                states.DisableController();
                                 waitToStartClimb = true;
-
+                                anim.SetBool("climbing", true);
+                                hasRootmotion = anim.applyRootMotion;
+                                anim.applyRootMotion = false;
+                                hold = true;
                             }
                         }
                     }
@@ -443,16 +455,52 @@ namespace Climbing
             Debug.DrawRay(origin, direction * 5);
 
             bool hitSides = GetHit(origin, direction, 2, lm);
+           
             if (hitSides == false)
             {
-                Debug.Log("f");
-                Vector3 towardsOrigin = origin + transform.right;
+                Vector3 towardsOrigin = origin + direction*5;
+
+                Debug.DrawRay(towardsOrigin, transform.forward * 5);
 
                 if(Physics.Raycast(towardsOrigin,transform.forward,out hit, 5, lm))
                 {
-                    retVal = hit.transform.root.GetComponentInChildren<Manager>();
+                    if (hit.transform.root.GetComponentInChildren<Manager>())
+                    {
+                        retVal = hit.transform.root.GetComponentInChildren<Manager>();
+                    }
                 }
             }
+            return retVal;
+        }
+
+        Manager LookForManager(Vector3 direction)
+        {
+            Manager retVal = null;
+
+            Vector3 worldP = curPoint.transform.position;
+            Vector3 aboveOrigin = worldP - transform.forward;
+
+            bool above = GetHit(aboveOrigin, direction, 1.5f, lm);
+
+            Debug.DrawRay(aboveOrigin, direction * 1.5f, Color.red);
+
+            if (!above)
+            {
+                Vector3 forwardOrigin = aboveOrigin + direction * 2;
+
+                Debug.DrawRay(forwardOrigin, transform.forward * 2, Color.yellow);
+
+                RaycastHit hit;
+
+                if(Physics.Raycast(forwardOrigin,transform.forward,out hit, 2, lm))
+                {
+                    if (hit.transform.GetComponentInChildren<Manager>())
+                    {
+                        retVal = hit.transform.GetComponentInChildren<Manager>();
+                    }
+                }
+            }
+
             return retVal;
         }
 
@@ -462,8 +510,9 @@ namespace Climbing
         private void HandleMount()
         {
             if (!initTransit)
-            {
+            { 
                 initTransit = true;
+                enableRootMovement = false;
                 ikFollowSideReached = false;
                 ikLandSideReached = false;
                 _t = 0;
@@ -480,6 +529,9 @@ namespace Climbing
 
                 if (dropOnLedge)
                     anim.CrossFade("dropLedge", 0.4f);
+
+                anim.SetFloat("Stance",
+                    (targetPoint.pointType == PointType.braced) ? 0 : 1);
 
                 dropOnLedge = false;
             }
@@ -534,6 +586,11 @@ namespace Climbing
                 ik.InfluenceWeight(AvatarIKGoal.LeftFoot, inf2);
                 ik.InfluenceWeight(AvatarIKGoal.RightFoot, inf2);
             }
+            if (curPoint.pointType == PointType.hanging && targetPoint.pointType == PointType.hanging)
+            {
+                ik.InfluenceWeight(AvatarIKGoal.LeftFoot, 0);
+                ik.InfluenceWeight(AvatarIKGoal.RightFoot, 0);
+            }
         }
 
         private void InitClimbing()
@@ -565,8 +622,8 @@ namespace Climbing
                     climbing = false;
                     initTransit = false;
                     ik.AddWeightInfluenceAll(0);
-                    GetComponent<Controller.StateManager>().EnableController();
-                    anim.SetBool("onAir", true);
+                    states.EnableController();
+                    anim.SetBool("climbing", false);
                 }
             }
         }
@@ -633,6 +690,9 @@ namespace Climbing
                     Dismount_RootMovement();
                     HandleDismountIK();
                     DismountWrapUp();
+                    break;
+                case ConnectionType.jumpBack:
+                    JumpBackwards();
                     break;
             }
         }
@@ -861,7 +921,10 @@ namespace Climbing
                 rootReached = true;
             }
 
-            HandleWeightAll(_t, a_jumpingCurve);
+            if (!lookOnZ)
+                HandleWeightAll(_t, a_jumpingCurve);
+            else
+                HandleWeightAll(_t, a_mountCurve);
 
             Vector3 targetPos = curCurve.GetPointAt(_t);
             transform.position = targetPos;
@@ -1176,6 +1239,8 @@ namespace Climbing
 
         private void OnPoint(Vector3 inD)
         {
+            jumpBack = false;
+
             neighbour = null;
 
             Manager targetManager = curManager;
@@ -1185,9 +1250,17 @@ namespace Climbing
                 inD.z = inD.y;
                 inD.y = 0;
                 targetManager = LookForManagerBehind();
+
+                if (targetManager == null)
+                {
+                    jumpBack = true;
+                    neighbour = jumpBackNeighbour;
+                    jumpBackNeighbour.target = curPoint;
+                }
             }
 
-            neighbour = ReturnNeighbour(inD, curPoint,targetManager);
+            if(!jumpBack)
+                 neighbour = ReturnNeighbour(inD, curPoint,targetManager);
 
             if(neighbour==null && !lookOnZ)
             {
@@ -1197,10 +1270,20 @@ namespace Climbing
                     {
                         neighbour = dismountNeighbour;
                     }
+                    else
+                    {
+                        targetManager = LookForManager(transform.up);
+                        if (targetManager != null)
+                            neighbour = ReturnNeighbour(inD, curPoint, targetManager);
+                    }
                 }
                 if (inD.y < 0)
                 {
-                    if (CanFall())
+                    targetManager = LookForManager(-transform.up);
+                    if (targetManager != null && targetManager!=curManager)
+                        neighbour = ReturnNeighbour(inD, curPoint, targetManager);
+
+                    else if (CanFall())
                     {
                         fallNeighbour.target = curPoint;
                         neighbour = fallNeighbour;
@@ -1263,8 +1346,10 @@ namespace Climbing
                     climbing = false;
                     initTransit = false;
                     ik.AddWeightInfluenceAll(0);
-                    GetComponent<Controller.StateManager>().EnableController();
-                    anim.SetBool("onAir", true);
+                    states.EnableController();
+                    anim.SetBool("climbing", false);
+                    break;
+                case ConnectionType.jumpBack:
                     break;
             }
             switch (targetPoint.pointType)
@@ -1300,38 +1385,54 @@ namespace Climbing
 
         private void LookForClimbSpot()
         {
-            Transform camTrans = Camera.main.transform;
-            Ray ray = new Ray(camTrans.position, camTrans.forward);
-
+            Vector3 origin = transform.position + Vector3.up;
+            Vector3 direction = transform.forward;
             RaycastHit hit;
 
             float maxDistance = 20;
 
-            
-            if (Physics.Raycast(ray,out hit, maxDistance, lm))
+            Debug.DrawRay(origin, direction * maxDistance, Color.yellow);
+            if (Physics.Raycast(origin,direction,out hit, maxDistance, lm))
             {
-                if (hit.transform.GetComponentInParent<Manager>())
+                if (hit.transform.GetComponentInChildren<Manager>())
                 {
-                    Manager tm = hit.transform.GetComponentInParent<Manager>();
+                    Manager tm = hit.transform.GetComponentInChildren<Manager>();
 
                     Point closestPoint = tm.ReturnClosest(transform.position);
 
-                    float distanceToPoint = Vector3.Distance(transform.position, closestPoint.transform.parent.position);
+                    float angle = Vector3.Angle(transform.forward,
+                        closestPoint.transform.forward);
 
-                    if (distanceToPoint < 5)
+                    Debug.Log(Vector3.Angle(closestPoint.transform.forward, Vector3.forward));
+                    if (angle > 40)
+                    {
+                        closestPoint = null;
+                        return;
+                    }
+
+                    float distanceToPoint = Vector3.Distance(transform.position,
+                        closestPoint.transform.parent.position);
+                    print(distanceToPoint);
+                    if (distanceToPoint <5 )
                     {
                         curManager = tm;
                         targetPoint = closestPoint;
+                        FixHipPositions(targetPoint);
+
                         targetPosition = closestPoint.transform.position;
                         curPoint = closestPoint;
-
-
                         climbing = true;
                         lockInput = true;
                         targetState = ClimbStates.onPoint;
+                        hasRootmotion = anim.applyRootMotion;
+                        anim.applyRootMotion = false;
+                        anim.SetBool("climbing", true);
+                        hold = true;
 
-                        anim.CrossFade("To_Climb", 0.4f);
-                        GetComponent<Controller.StateManager>().DisableController();
+                        states.DisableController();
+
+                        //anim.CrossFade("To_Climb", 0.4f);
+                        //GetComponent<Controller.StateManager>().DisableController();
 
                         waitToStartClimb = true;
                     }
@@ -1386,9 +1487,16 @@ namespace Climbing
                         retVal = TransitDir.j_up;
                 }
             }
+            if (lookOnZ)
+            {
+                if (inpd.z < 0)
+                {
+                    retVal = TransitDir.j_back;
+                }
+            }
             return retVal;
         }
-
+         
         private void PlayAnim(TransitDir dir, bool jump=false)
         {
             int target = 0;
@@ -1413,6 +1521,9 @@ namespace Climbing
                 case TransitDir.j_right:
                     target = 2;
                     break;
+                case TransitDir.j_back:
+                    target = 0;
+                    break;
             }
             anim.SetInteger("JumpType", target);
 
@@ -1428,9 +1539,79 @@ namespace Climbing
             j_up,
             j_down,
             j_left,
-            j_right
+            j_right,
+            j_back,
+            j_forward
         }
 
         #endregion
+
+        #region Jump Back
+
+        float rotationT;
+        float targetAngle;
+        bool jumpBack;
+        bool init_JumpBack;
+
+        void JumpBackwards()
+        {
+            if (!init_JumpBack)
+            {
+                anim.applyRootMotion = false;
+                init_JumpBack = true;
+                ik.AddWeightInfluenceAll(0);
+                states.EnableController();
+                states.hMovement.rb.isKinematic = true;
+                anim.SetBool("Jump", true);
+                anim.SetInteger("JumpType", 22);
+                enableRootMovement = false;
+                rotationT = 0;
+
+                targetAngle = transform.localRotation.y + 180;
+            }
+
+            if (enableRootMovement)
+            {
+                rotationT += Time.deltaTime * 2;
+            }
+            if (rotationT > 1)
+                rotationT = 1;
+            transform.localRotation = Quaternion.Euler(
+                transform.localRotation.x,
+                Mathf.Lerp(transform.localRotation.y, targetAngle, rotationT),
+                transform.localRotation.z);
+
+        }
+        void AddJumpBackwardsForce()
+        {
+            states.hMovement.rb.isKinematic = false;
+            StartCoroutine("JumpBackForce");
+            enableRootMovement = true;
+        }
+        IEnumerator JumpBackForce()
+        {
+            yield return new WaitForEndOfFrame();
+            states.hMovement.rb.AddForce(-transform.forward * 5 + Vector3.up * 2, ForceMode.Impulse);
+        }
+        public void StopClimibng()
+        {
+            states.EnableController();
+            climbing = false;
+            anim.SetBool("climbing", false);
+            anim.SetBool("Jump", false);
+            init_JumpBack = false;
+            jumpBack = false;
+        }
+
+        #endregion
+
+        public void UnHold()
+        {
+            hold = false;
+        }
+        public void EnableRootMovement()
+        {
+            enableRootMovement = true;
+        }
     }
 }

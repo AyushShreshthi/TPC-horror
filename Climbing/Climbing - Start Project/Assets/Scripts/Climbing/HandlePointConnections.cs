@@ -304,7 +304,7 @@ namespace Climbing
 
                     Neighbour n2 = new Neighbour();
                     n2.direction = -Vector3.up;
-                    n2.target = dismountPoint;//p
+                    n2.target = p;
                     n2.cType = ConnectionType.dismount;
                     p.neighbours.Add(n2);
 
