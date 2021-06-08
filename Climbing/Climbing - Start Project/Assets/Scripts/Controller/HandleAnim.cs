@@ -31,7 +31,7 @@ namespace Controller
         {
             float animValue = Mathf.Abs(states.horizontal) + Mathf.Abs(states.vertical);
             animValue = Mathf.Clamp01(animValue);
-
+            print(animValue);
             if (states.isGroundForward)
                 anim.SetFloat("Movement", animValue);
             else

@@ -336,7 +336,8 @@ namespace Climbing
                     offset += transform.position;
 
                     Vector3 targetRotationDir = shoulder.transform.position - offset;
-                   
+                   // targetRotationDir.x = 0;
+
                     Quaternion targetRot = Quaternion.LookRotation(-targetRotationDir);
                     helper.rotation = targetRot;
 

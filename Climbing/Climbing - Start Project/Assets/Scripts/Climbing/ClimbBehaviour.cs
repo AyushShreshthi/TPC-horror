@@ -62,7 +62,7 @@ namespace Climbing
         Vector3 targetPosition;
 
         public Vector3 rootOffset = new Vector3(0, -0.86f, 0);
-        public float speed_linear = 1.3f;
+        public float speed_linear = 1.5f;
         public float speed_direct = 2;
         public float speed_dropLedge = 1.5f;
 
@@ -183,6 +183,7 @@ namespace Climbing
                                 dropOnLedge = true;
                                 states.DisableController();
                                 waitToStartClimb = true;
+
                                 anim.SetBool("climbing", true);
                                 hasRootmotion = anim.applyRootMotion;
                                 anim.applyRootMotion = false;
@@ -193,7 +194,6 @@ namespace Climbing
                 }
             }
         }
-
 
         #region Neighbour Manager
 
@@ -355,13 +355,13 @@ namespace Climbing
 
             if(Physics.Raycast(origin,direction,out hit, 5, lm))
             {
-                if (hit.transform.GetComponentInChildren<Manager>())
+                if (hit.transform.root.GetComponentInChildren<Manager>())
                 {
-                    retVal = hit.transform.GetComponentInChildren<Manager>();
+                    retVal = hit.transform.root.GetComponentInChildren<Manager>();
                 }
             }
-
-
+            // if u want behind and diagonally managers
+            // do the above same but with different direction
             return retVal;
         }
 
@@ -374,6 +374,7 @@ namespace Climbing
 
             bool above = GetHit(aboveOrigin, Vector3.up, 1.5f, lm);
 
+            Debug.DrawRay(aboveOrigin, Vector3.up* 1.5f, Color.red);
             if (!above)
             {
                 Vector3 forwardOrigin = aboveOrigin + Vector3.up * 2;
@@ -560,15 +561,14 @@ namespace Climbing
 
         private void HandleRotation()
         {
-            Vector3 targetDir = targetPoint.transform.position;
+            Vector3 targetDir = targetPoint.transform.forward;
 
             if (targetDir == Vector3.zero)
             {
-                print("transform");
-                targetDir = transform.position;
+                targetDir = transform.forward;
             }
 
-            Quaternion targetRot = Quaternion.LookRotation(Vector3.zero,targetDir);
+            Quaternion targetRot = Quaternion.LookRotation(targetDir);
 
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 5);
 
@@ -696,7 +696,7 @@ namespace Climbing
                     break;
             }
         }
-        #endregion
+        #endregion  
 
         #region Dismount
         private void DismountWrapUp()
@@ -705,6 +705,7 @@ namespace Climbing
             {
                 climbing = false;
                 initTransit = false;
+                anim.SetBool("climbing", false);
                 GetComponent<Controller.StateManager>().EnableController();
             }
         }
@@ -719,7 +720,7 @@ namespace Climbing
             HandleIKWeight_Dismount(_ikT, _fikT, 1, 0);
         }
 
-        private void HandleIKWeight_Dismount(float ht, float gt, int from, int to)
+        private void HandleIKWeight_Dismount(float ht, float ft, int from, int to)
         {
             float t1 = ht * 3;
 
@@ -733,7 +734,7 @@ namespace Climbing
             ik.InfluenceWeight(AvatarIKGoal.LeftHand, handsWeight);
             ik.InfluenceWeight(AvatarIKGoal.RightHand, handsWeight);
 
-            float t2 = t1 * 1;
+            float t2 = ft * 1;
 
             if (t2 > 1)
             {
@@ -1053,7 +1054,7 @@ namespace Climbing
             float speed = speed_linear * Time.deltaTime;
             float lerpSpeed = speed / _distance;
 
-            _ikT += lerpSpeed * 3;
+            _ikT += lerpSpeed * 2;
 
             if (_ikT > 1)
             {
@@ -1370,8 +1371,9 @@ namespace Climbing
 
         private Vector3 ConvertToInputDirection(float horizontal, float vertical)
         {
-            int h = (horizontal != 0) ? (horizontal < 0) ?
-                -1 : 1 : 0;
+            int h = (horizontal != 0) ? 
+                (horizontal < 0) ?-1 : 1
+                : 0;
 
             int v = (vertical != 0) ? (vertical < 0) ?
                 -1 : 1 : 0;
@@ -1389,7 +1391,7 @@ namespace Climbing
             Vector3 direction = transform.forward;
             RaycastHit hit;
 
-            float maxDistance = 20;
+            float maxDistance = 3;
 
             Debug.DrawRay(origin, direction * maxDistance, Color.yellow);
             if (Physics.Raycast(origin,direction,out hit, maxDistance, lm))
@@ -1403,7 +1405,7 @@ namespace Climbing
                     float angle = Vector3.Angle(transform.forward,
                         closestPoint.transform.forward);
 
-                    Debug.Log(Vector3.Angle(closestPoint.transform.forward, Vector3.forward));
+                   // Debug.Log(Vector3.Angle(closestPoint.transform.forward, Vector3.forward));
                     if (angle > 40)
                     {
                         closestPoint = null;
@@ -1412,7 +1414,7 @@ namespace Climbing
 
                     float distanceToPoint = Vector3.Distance(transform.position,
                         closestPoint.transform.parent.position);
-                    print(distanceToPoint);
+                    //print(distanceToPoint);
                     if (distanceToPoint <5 )
                     {
                         curManager = tm;
