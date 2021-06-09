@@ -1182,8 +1182,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _curve: {fileID: 2818609960661219613}
   handleStyle: 0
-  _handle1: {x: 0.099999905, y: -0.22883797, z: -0.012722015}
-  _handle2: {x: -0.099999905, y: 0.22883797, z: 0.012722015}
+  _handle1: {x: 0.099999905, y: 0.19700623, z: -0.60567474}
+  _handle2: {x: -0.099999905, y: -0.19700623, z: 0.60567474}
 --- !u!1 &8388068929734159369
 GameObject:
   m_ObjectHideFlags: 0

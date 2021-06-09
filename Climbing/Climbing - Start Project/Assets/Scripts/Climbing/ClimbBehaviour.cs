@@ -19,12 +19,14 @@ namespace Climbing
         bool waitForWrapUp;
         bool dropOnLedge;
         bool hasRootmotion;
+        bool isOnOpposite;
 
         Animator anim;
         ClimbIK ik;
         StateManager states;
 
         Manager curManager;
+        Manager lastCheckedManager;
         Point targetPoint;
         Point curPoint;
         Point prevPoint;
@@ -56,6 +58,8 @@ namespace Climbing
         bool rootReached;
         bool ikLandSideReached;
         bool ikFollowSideReached;
+        bool skipDepthCheck;
+        bool skipAngleCheck;
 
         bool lockInput;
         Vector3 inputDirection;
@@ -65,6 +69,7 @@ namespace Climbing
         public float speed_linear = 1.5f;
         public float speed_direct = 2;
         public float speed_dropLedge = 1.5f;
+        public float jump_back_speed = 1.5f;
 
         public AnimationCurve a_jumpingCurve;
         public AnimationCurve a_hangingToBrace;
@@ -76,6 +81,7 @@ namespace Climbing
 
         LayerMask lm;
 
+        AngleCheck curAngleCheck;
         #endregion
 
         void SetCurveReferences()
@@ -271,23 +277,6 @@ namespace Climbing
             return retVal;
         }
 
-        private Point ReturnClosest(Point cp, List<Point> l)
-        {
-            Point retVal = null;
-            float minDist = Mathf.Infinity;
-
-            for(int i = 0; i < l.Count; i++)
-            {
-                float tempDist = Vector3.Distance(cp.transform.position, l[i].transform.position);
-
-                if(tempDist<minDist && l[i] != cp)
-                {
-                    minDist = tempDist;
-                    retVal = l[i];
-                }
-            }
-            return retVal;
-        }
 
         private List<Point> CanidatePointsOnDirection(Vector3 targetDirection, Point from, Manager m)
         {
@@ -300,7 +289,7 @@ namespace Climbing
                 if (targetPoint == from)
                     continue;
 
-                Vector3 relativePosition = from.transform.InverseTransformPoint(targetPoint.transform.position);
+                Vector3 relativePosition = from.transform.parent.InverseTransformPoint(targetPoint.transform.parent.position);
 
                 if (IsDirectionValid(targetDirection, relativePosition))
                 {
@@ -312,15 +301,20 @@ namespace Climbing
 
         private bool IsDirectionValid(Vector3 targetDirection, Vector3 canidate)
         {
-            bool retVal = false;
-
+            
             float targetAngle = Mathf.Atan2(targetDirection.x, targetDirection.y) * Mathf.Rad2Deg;
             float angle = Mathf.Atan2(canidate.x, canidate.y) * Mathf.Rad2Deg;
+            float depthAngle = Mathf.Atan2(canidate.x, canidate.z) * Mathf.Rad2Deg;
 
             if (targetDirection.y != 0)
             {
                 targetAngle = Mathf.Abs(targetAngle);
                 angle = Mathf.Abs(angle);
+
+                if (angle < targetAngle + 22.5f && angle > targetAngle - 22.5f)
+                {
+                    return true;
+                }
             }
 
             if (targetDirection.z != 0)
@@ -330,19 +324,63 @@ namespace Climbing
 
                 if (angle < targetAngle + 22.5f && angle > targetAngle - 22.5f)
                 {
-                    retVal = true;
+                    return true;
                 }
             }
             else
             {
                 if (angle < targetAngle + 22.5f && angle > targetAngle - 22.5f)
                 {
-                    retVal = true;
+                    if (Mathf.Abs(depthAngle) > 60 && Mathf.Abs(depthAngle) < 100)
+                    {
+
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        Point ReturnClosest(Point cp,List<Point> l)
+        {
+            Point retVal = null;
+
+            float minDist = Mathf.Infinity;
+
+            for(int i = 0; i < l.Count; i++)
+            {
+                float tempDist = Vector3.Distance(cp.transform.position, l[i].transform.position);
+
+                bool inAngle = (skipAngleCheck) ? true :
+                    (Vector3.Angle(cp.transform.forward, l[i].transform.forward) < 25);
+
+                    //InAngle(curPoint, l[i], curAngleCheck);
+
+                if (tempDist < minDist && l[i] != cp && inAngle)
+                {
+                    minDist = tempDist;
+                    retVal = l[i];
                 }
             }
             return retVal;
         }
 
+        Point ReturnPoint(Vector3 inpd,Point curPoint,Manager m)
+        {
+            if (m == null)
+                return null;
+
+            Point retval = null;
+
+            Point tp = NeighbourPoint(inpd, curPoint, m);
+            retval = tp;
+            if (retval != null)
+            {
+                //lastCheckedManager = curManager;
+                curManager = m;
+            }
+            return retval;
+        }
         Manager LookForManagerBehind()
         {
             Manager retVal = null;
@@ -505,6 +543,210 @@ namespace Climbing
             return retVal;
         }
 
+        private Manager LookForManager_Corner_In(Vector3 inpD)
+        {
+            Manager retVal = null;
+            Vector3 origin = curPoint.transform.position;
+            Vector3 sides = curPoint.transform.right * inpD.x;
+            RaycastHit hit;
+            Debug.DrawRay(origin, sides * 1, Color.yellow);
+
+            if(Physics.Raycast(origin,sides,out hit, 1, lm))
+            {
+                if (hit.transform.GetComponentInChildren<Manager>())
+                {
+                    Manager m = hit.transform.GetComponentInChildren<Manager>();
+                    retVal = m;
+                }
+            }
+            return retVal;
+        }
+
+        private Manager LookForManager_Corner_Out(Vector3 inpd)
+        {
+            Manager retval = null;
+
+            Vector3 origin = curPoint.transform.position;
+            Vector3 sides = curPoint.transform.right * inpd.x;
+            bool clearSides = GetHit(origin, sides, 1, lm);
+            Debug.DrawRay(origin, sides * 1, Color.red);
+
+            if (!clearSides)
+            {
+                Vector3 newOrigin = origin + sides;
+                bool clearForward = GetHit(newOrigin, curPoint.transform.forward, 1, lm);
+                Debug.DrawRay(newOrigin, transform.forward * 1, Color.yellow);
+
+                if (!clearForward)
+                {
+                    Vector3 cornerOrigin = newOrigin + transform.forward;
+                    Vector3 cornerDir = curPoint.transform.right * (-inpd.x);
+                    Debug.DrawRay(cornerOrigin, cornerDir * 2, Color.blue);
+                    RaycastHit cornerHit;
+
+                    if (Physics.Raycast(cornerOrigin, cornerDir, out cornerHit, 2, lm))
+                    {
+                        if (cornerHit.transform.GetComponentInChildren<Manager>())
+                        {
+                            Manager m = cornerHit.transform.GetComponentInChildren<Manager>();
+                            retval = m;
+                        }
+                    }
+                }
+            }
+            return retval;
+        }
+
+        Manager LookForManager_Around()
+        {
+            Manager retVal = null;
+            Vector3 origin = curPoint.transform.position + transform.forward;
+            Vector3 direction = -curPoint.transform.forward;
+            RaycastHit hit;
+
+            if(Physics.Raycast(origin,direction,out hit, 1, lm))
+            {
+                if (hit.transform.GetComponentInChildren<Manager>())
+                {
+                    Manager m = hit.transform.GetComponentInChildren<Manager>();
+                    retVal = m;
+                }
+            }
+            return retVal;
+        }
+
+        Manager LookForManager_Forward()
+        {
+            Manager retVal = null;
+
+            Vector3 worldP = curPoint.transform.position;
+            RaycastHit hit;
+            Debug.DrawRay(worldP, transform.forward * 5);
+            if(Physics.Raycast(worldP,transform.forward,out hit, 2, lm))
+            {
+                if (hit.transform.GetComponentInChildren<Manager>())
+                {
+                    Manager m = hit.transform.GetComponentInChildren<Manager>();
+
+                    if (m != curManager)
+                        retVal = m;
+                }
+            }
+
+            return retVal;
+        }
+
+        Neighbour CheckForManagerAhead(Vector3 inpD,Manager targetManager)
+        {
+            Neighbour n = new Neighbour();
+            Point tp = null;
+
+            if (inpD.z > 0)
+            {
+                if (targetManager != null)
+                {
+                    tp = ReturnPoint(inpD, curPoint, targetManager);
+                }
+            }
+            n.target = tp;
+
+            return n;
+        }
+        Neighbour CheckForNearManager(Vector3 inpD,Manager targetManager)
+        {
+            Neighbour n = new Neighbour();
+            Point tp = null;
+
+            if (inpD.y > 0)
+            {
+                if (CanDismount())
+                {
+                    n = dismountNeighbour;
+                    return n;
+                }
+                else
+                {
+                    targetManager = LookForManager(transform.up);
+                    if (targetManager != null)
+                    {
+                        tp = ReturnPoint(inpD, curPoint, targetManager);
+                    }
+                }
+            }
+            if (inpD.y < 0)
+            {
+                targetManager = LookForManager(-transform.up);
+                if(targetManager!=null && targetManager != curManager)
+                {
+                    tp = ReturnPoint(inpD, curPoint, targetManager);
+                }
+                else if (CanFall())
+                {
+                    fallNeighbour.target = curPoint;
+                    n = fallNeighbour;
+                    return n;
+                }
+            }
+            if (inpD.y == 0)
+            {
+                if (inpD.x != 0)
+                {
+                    targetManager = LookForManagerSides(inpD.x);
+
+                    if (targetManager != null)
+                    {
+                        tp = ReturnPoint(inpD, curPoint, targetManager);
+                    }
+                }
+            }
+            n.target = tp;
+            return n;
+        }
+        Neighbour DoConnectionTypeChecks(Vector3 inpD,Neighbour n,bool hanging = false)
+        {
+            if (n.customConnection)
+                return n;
+
+            if (n.target)
+            {
+                float distance = Vector3.Distance(curPoint.transform.parent.position, n.target.transform.parent.position);
+
+                if (distance < minDistance)
+                {
+                    if (distance == 0)
+                    {
+                        n.cType = ConnectionType.fall;
+                    }
+                    else
+                    {
+                        n.cType = (distance < directThreshold) ? ConnectionType.inBetween : ConnectionType.direct;
+                    }
+                    if(n.cType == ConnectionType.direct && inpD.x != 0 && inpD.y != 0)
+                    {
+                        n.target = null;
+                    }
+
+                }
+                else
+                {
+                    n.target = null;
+                }
+            }
+            if (hanging)
+            {
+                if (n.cType == ConnectionType.direct)
+                {
+                    if (inpD.z < 0)
+                    {
+                        n.target = null; 
+                    }
+                }
+            }
+            //if (n.target == null)
+              //  curManager = lastCheckedManager;
+            return n;
+        }
+
         #endregion
 
         #region Mains
@@ -517,6 +759,7 @@ namespace Climbing
                 ikFollowSideReached = false;
                 ikLandSideReached = false;
                 _t = 0;
+                rotationT = 0;
                 _startPos = transform.position;
                 _targetPos = targetPosition + rootOffset;
 
@@ -534,7 +777,6 @@ namespace Climbing
                 anim.SetFloat("Stance",
                     (targetPoint.pointType == PointType.braced) ? 0 : 1);
 
-                dropOnLedge = false;
             }
             if (enableRootMovement)
             {
@@ -548,7 +790,7 @@ namespace Climbing
                 initTransit = false;
                 ikLandSideReached = false;
                 climbState = targetState;
-            
+                dropOnLedge = false;
             }
 
             Vector3 targetPos = curCurve.GetPointAt(_t);
@@ -570,7 +812,8 @@ namespace Climbing
 
             Quaternion targetRot = Quaternion.LookRotation(targetDir);
 
-            transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, Time.deltaTime * 5);
+            rotationT += Time.deltaTime * 5;
+            transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, rotationT);
 
         }
 
@@ -681,8 +924,9 @@ namespace Climbing
                     break;
                 case ConnectionType.direct:
                     UpdateDirectVariables(inputDirection);
-                    Direct_RootMovement();
+                    Direct_RootMovement(speed_direct);
                     DirectHandleIK();
+                    HandleRotation();
                     WrapUp(true);
                     break;
                 case ConnectionType.dismount:
@@ -694,9 +938,61 @@ namespace Climbing
                 case ConnectionType.jumpBack:
                     JumpBackwards();
                     break;
+                case ConnectionType.jumpBack_onManager:
+                    UpdateDirectVariables(inputDirection);
+                    Direct_RootMovement(jump_back_speed);
+                    DirectHandleIK();
+                    HandleRotation_Controlled(180,2);
+                    WrapUp(true);
+                    break;
+                case ConnectionType.hanging_jump_forward:
+                    UpdateDirectVariables(inputDirection);
+                    Direct_RootMovement(speed_direct);
+                    DirectHandleIK();
+                    HandleRotation();
+                    WrapUp(true);
+                    break;
+                case ConnectionType.hanging_jump_air:
+                    //JumpForward();
+                    break;
+                case ConnectionType.hanging_turn_around:
+                    UpdateLinearvariables();
+                    Linear_RootMovement();
+                    LerpIKLandingSide_Linear();
+                    HandleRotation_Controlled(-90, 2);
+                    WrapUp();
+                    break;
+                case ConnectionType.corner_in:
+                case ConnectionType.corner_out:
+                    UpdateLinearvariables();
+                    Linear_RootMovement();
+                    LerpIKLandingSide_Linear();
+                    WrapUp();
+                    break;
             }
         }
-        #endregion  
+
+        private void HandleRotation_Controlled(float value ,float rotSpeed )
+        {
+            if (!init_JumpBack)
+            {
+                targetAngle = transform.localRotation.y + value;
+                init_JumpBack = true;
+            }
+            if (enableRootMovement)
+            {
+                rotationT += Time.deltaTime * rotSpeed;
+            }
+            if (rotationT > 1)
+                rotationT = 1;
+
+            transform.localRotation = Quaternion.Euler(
+                transform.localRotation.x,
+                Mathf.Lerp(transform.localRotation.y,targetAngle,rotationT),
+                transform.localRotation.z);
+
+        }
+        #endregion
 
         #region Dismount
         private void DismountWrapUp()
@@ -774,6 +1070,7 @@ namespace Climbing
                 ikLandSideReached = false;
                 ikFollowSideReached = false;
                 _t = 0;
+                rotationT = 0;
                 _rmT = 0;
                 _startPos = transform.position;
                 _targetPos = targetPosition;
@@ -900,11 +1197,13 @@ namespace Climbing
                 ik.UpdateTargetPositions(ik.ReturnOppositeIK(ik_F), followPosition);
             }
         }
-        private void Direct_RootMovement()
+        private void Direct_RootMovement(float speed)
         {
+            float targetSpeed = speed;
+
             if (enableRootMovement)
             {
-                _t += Time.deltaTime * speed_direct;
+                _t += Time.deltaTime * targetSpeed;
             }
             else
             {
@@ -930,7 +1229,7 @@ namespace Climbing
             Vector3 targetPos = curCurve.GetPointAt(_t);
             transform.position = targetPos;
 
-            HandleRotation();
+           // HandleRotation();
         }
 
         private void UpdateDirectVariables(Vector3 inpD)
@@ -943,6 +1242,7 @@ namespace Climbing
                 ikFollowSideReached = false;
                 ikLandSideReached = false;
                 _t = 0;
+                rotationT = 0;
                 _rmT = 0;
                 _targetPos = targetPosition + rootOffset;
                 _startPos = transform.position;
@@ -961,34 +1261,60 @@ namespace Climbing
 
         private BezierCurve FindCurveByInput(bool vertical, Vector3 inpd)
         {
-            BezierCurve retVal = null;
-
             if (!vertical)
             {
                 if (inpd.x > 0)
                 {
-                    retVal = curveHolder.ReturnCurve(CurveType.right);
+                    return curveHolder.ReturnCurve(CurveType.right);
 
                 }
                 else
                 {
-                    retVal = curveHolder.ReturnCurve(CurveType.left);
+                    return curveHolder.ReturnCurve(CurveType.left);
 
                 }
             }
             else
             {
-                if (inpd.y > 0)
+                if (!lookOnZ) 
                 {
-                    retVal = curveHolder.ReturnCurve(CurveType.up);
+                    if (curPoint.pointType != PointType.hanging)
+                    {
+                        if (inpd.y > 0)
+                        {
+                            return curveHolder.ReturnCurve(CurveType.up);
+                        }
+                        else
+                        {
+                            return curveHolder.ReturnCurve(CurveType.down);
+
+                        }
+                    }
+                    else
+                    {
+                        if (inpd.z > 0)
+                        {
+                            return null;
+                        }
+                        else
+                        {
+                            return curveHolder.ReturnCurve(CurveType.forward);
+                        }
+                    }
                 }
                 else
                 {
-                    retVal = curveHolder.ReturnCurve(CurveType.down);
-
+                    if (inpd.y > 0)
+                    {
+                        return curveHolder.ReturnCurve(CurveType.forward);
+                    }
+                    else
+                    {
+                        return curveHolder.ReturnCurve(CurveType.back);
+                    }
                 }
+                
             }
-            return retVal;
         }
 
         private void InitIK_Direct(Vector3 directionToPoint)
@@ -1112,6 +1438,7 @@ namespace Climbing
                 ikLandSideReached = false;
 
                 _t = 0;
+                rotationT = 0;
                 _startPos = transform.position;
                 _targetPos = targetPosition + rootOffset;
                 Vector3 directionToPoint = (_targetPos - _startPos).normalized;
@@ -1213,6 +1540,16 @@ namespace Climbing
         Vector3[] _ikStartPos = new Vector3[4];
         Vector3[] _ikTargetPos = new Vector3[4];
 
+
+        void PlaceIK(Point cp)
+        {
+            UpdateIKTarget(0, AvatarIKGoal.LeftHand, cp);
+            UpdateIKTarget(1, AvatarIKGoal.LeftFoot, cp);
+
+            UpdateIKTarget(2, AvatarIKGoal.RightHand, cp);
+            UpdateIKTarget(3, AvatarIKGoal.RightFoot, cp);
+        }
+
         #endregion
 
         #region Others
@@ -1240,68 +1577,91 @@ namespace Climbing
 
         private void OnPoint(Vector3 inD)
         {
-            jumpBack = false;
-
+            //curAngleCheck = AngleCheck.skip;
+            skipAngleCheck = true;
             neighbour = null;
-
+            Neighbour targetNeighbour = null;
             Manager targetManager = curManager;
 
-            if (lookOnZ)
+            switch (curPoint.pointType)
             {
-                inD.z = inD.y;
-                inD.y = 0;
-                targetManager = LookForManagerBehind();
-
-                if (targetManager == null)
-                {
-                    jumpBack = true;
-                    neighbour = jumpBackNeighbour;
-                    jumpBackNeighbour.target = curPoint;
-                }
+                case PointType.braced:
+                    targetNeighbour = OnPointBraced(inD, targetManager);
+                    break;
+                case PointType.hanging:
+                    targetNeighbour = OnPointHanging(inD, targetManager);
+                    break;
             }
+            neighbour = targetNeighbour;
 
-            if(!jumpBack)
-                 neighbour = ReturnNeighbour(inD, curPoint,targetManager);
+            #region faltu
+            //jumpBack = false;
 
-            if(neighbour==null && !lookOnZ)
-            {
-                if (inD.y > 0)
-                {
-                    if (CanDismount())
-                    {
-                        neighbour = dismountNeighbour;
-                    }
-                    else
-                    {
-                        targetManager = LookForManager(transform.up);
-                        if (targetManager != null)
-                            neighbour = ReturnNeighbour(inD, curPoint, targetManager);
-                    }
-                }
-                if (inD.y < 0)
-                {
-                    targetManager = LookForManager(-transform.up);
-                    if (targetManager != null && targetManager!=curManager)
-                        neighbour = ReturnNeighbour(inD, curPoint, targetManager);
+            //neighbour = null;
 
-                    else if (CanFall())
-                    {
-                        fallNeighbour.target = curPoint;
-                        neighbour = fallNeighbour;
-                    }
-                }
-                if (inD.x != 0)
-                {
-                    Manager managerSides = LookForManagerSides(inputDirection.x);
+            //Manager targetManager = curManager;
 
-                    if (managerSides != null)
-                    {
-                        neighbour = ReturnNeighbour(inD, curPoint, managerSides);
-                    }
-                }
-            }
+            //if (lookOnZ)
+            //{
+            //    inD.z = inD.y;
+            //    inD.y = 0;
+            //    targetManager = LookForManagerBehind();
+
+            //    if (targetManager == null)
+            //    {
+            //        jumpBack = true;
+            //        neighbour = jumpBackNeighbour;
+            //        jumpBackNeighbour.target = curPoint;
+            //    }
+            //}
+
+            //if(!jumpBack)
+            //     neighbour = ReturnNeighbour(inD, curPoint,targetManager);
+
+            //if(neighbour==null && !lookOnZ)
+            //{
+            //    if (inD.y > 0)
+            //    {
+            //        if (CanDismount())
+            //        {
+            //            neighbour = dismountNeighbour;
+            //        }
+            //        else
+            //        {
+            //            targetManager = LookForManager(transform.up);
+            //            if (targetManager != null)
+            //                neighbour = ReturnNeighbour(inD, curPoint, targetManager);
+            //        }
+            //    }
+            //    if (inD.y < 0)
+            //    {
+            //        targetManager = LookForManager(-transform.up);
+            //        if (targetManager != null && targetManager!=curManager)
+            //            neighbour = ReturnNeighbour(inD, curPoint, targetManager);
+
+            //        else if (CanFall())
+            //        {
+            //            fallNeighbour.target = curPoint;
+            //            neighbour = fallNeighbour;
+            //        }
+            //    }
+            //    if (inD.x != 0)
+            //    {
+            //        Manager managerSides = LookForManagerSides(inputDirection.x);
+
+            //        if (managerSides != null)
+            //        {
+            //            neighbour = ReturnNeighbour(inD, curPoint, managerSides);
+            //        }
+            //    }
+            //}
+            #endregion
+
             if (neighbour != null )
             {
+                if (neighbour.target == null)
+                    return;
+
                 FixHipPositions(neighbour.target);
 
                 targetPoint = neighbour.target;
@@ -1311,10 +1671,159 @@ namespace Climbing
 
                 lockInput = true;
             }
+
+        }
+
+        private Neighbour OnPointHanging(Vector3 inpD, Manager targetManager)
+        {
+
+            Neighbour n = new Neighbour();
+            Point tp = null;
+            skipAngleCheck = false;
+
+            tp = ReturnPoint(inpD, curPoint, targetManager);
+
+            if (tp == null)
+            {
+                n = CheckForNearManager(inpD, targetManager);
+                tp = n.target;
+            }
+            if (tp == null)
+            {
+                if (inpD.z > 0)
+                {
+                    targetManager = LookForManager_Forward();
+                    n = CheckForManagerAhead(inpD, targetManager);
+                    n.cType = ConnectionType.hanging_jump_forward;
+                    tp = n.target;
+                    return n;
+                }
+                if (inpD.z < 0)
+                {
+                   // if (curPoint.doubleSided)
+                   // {
+                   //     n.cType = ConnectionType.hanging_turn_around;
+                   //     n.target = curPoint;
+                   //     tp = n.target;
+                   //     return n;
+                   // }
+                }
+            }
+
+            if (tp == null)
+                return null;
+
+            n.target = tp;
+            n = DoConnectionTypeChecks(inpD, n,true);
+
+            return n;
+        }
+
+        private Neighbour OnPointBraced(Vector3 inpD,Manager targetManager)
+        {
+            Neighbour n = new Neighbour();
+            Point tp = null;
+            
+            //curAngleCheck=AngleCheck.skip;
+            //skipDepthCheck = false;
+
+            #region CheckBehind
+
+            if (lookOnZ)
+            {
+                inpD.z = inpD.y;
+                inpD.y = 0;
+                inpD.x = 0;
+
+                if (inpD.z < 0)
+                {
+                    targetManager = LookForManagerBehind();
+
+                    if (targetManager == null)
+                    {
+                        n = jumpBackNeighbour;
+                        jumpBackNeighbour.target = curPoint;
+                        skipAngleCheck = false;
+                        return n;
+                    }
+                    else
+                    {
+                        //curAngleCheck = AngleCheck.opposite;
+                        n.cType = ConnectionType.jumpBack_onManager;
+                        tp = ReturnPoint(inpD, curPoint, targetManager);
+                        n.target = tp;
+                        return n;
+                    }
+                }
+            }
+
+            #endregion
+
+            skipAngleCheck = false;
+            tp = ReturnPoint(inpD, curPoint, targetManager);
+
+            if (tp == null && !lookOnZ)
+            {
+                n = CheckForNearManager(inpD, targetManager);
+                tp = n.target;
+
+                #region dhyan mein rkhna ise 
+
+                //if (tp == null && inpD.x != 0)
+                //{
+                //    skipDepthCheck = true;
+                //    curAngleCheck = AngleCheck.skip;
+                //    targetManager = LookForManager_Corner_In(inpD);
+
+                //    if (targetManager != null)
+                //    {
+                //       // n = CheckManagerCorner(inpD, targetManager);
+                //        tp = n.target;
+                //        n.cType = ConnectionType.corner_in;
+
+                //        if (n.target != null)
+                //        {
+                //           float dis= Vector2.Distance(curPoint.transform.parent.position, n.target.transform.parent.position);
+                //            if (dis > directThreshold)
+                //            {
+                //                n.target = null;
+                //            }
+                //        }
+
+                //        return n;
+                //    }
+                //    else
+                //    {
+                //        targetManager = LookForManager_Corner_Out(inpD);
+                //       // n = CheckManagerCorner(inpD, targetManager);
+                //        tp = n.target;
+                //        n.cType = ConnectionType.corner_out;
+                //        if (n.target != null)
+                //        {
+                //            float dis = Vector2.Distance(curPoint.transform.parent.position, n.target.transform.parent.position);
+                //            if (dis > directThreshold)
+                //            {
+                //                n.target = null;
+                //            }
+                //        }
+                //        return n;
+                //    }
+                //}
+                #endregion 
+
+            }
+            n.target = tp;
+            n = DoConnectionTypeChecks(inpD, n);
+
+            if (n.target == null)
+                n = null;
+
+            return n;
         }
 
         private void UpdateConnectionTransitByType(Neighbour n, Vector3 inputD)
         {
+            //customRotationOnDirect = false;
             Vector3 desiredPos = Vector3.zero;
             curConnection = n.cType;
 
@@ -1337,6 +1846,7 @@ namespace Climbing
                     targetState = ClimbStates.onPoint;
                     TransitDir transitDir2 = ReturnTransitDirection(inputD, true);
                     PlayAnim(transitDir2,true);
+                    //customRotationOnDirect = (transitDir2 == TransitDir.j_back);
                     break;
                 case ConnectionType.dismount:
                     desiredPos = targetPoint.transform.position;
@@ -1351,6 +1861,37 @@ namespace Climbing
                     anim.SetBool("climbing", false);
                     break;
                 case ConnectionType.jumpBack:
+                    break;
+                case ConnectionType.jumpBack_onManager:
+                    desiredPos = targetPoint.transform.position;
+                    targetState = ClimbStates.onPoint;
+                    PlayAnim(TransitDir.j_back, true);
+                    break;
+                case ConnectionType.hanging_jump_forward:
+                    desiredPos = targetPoint.transform.position;
+                    targetState = ClimbStates.onPoint;
+                    PlayAnim(TransitDir.h_j_forward, true);
+                    break;
+                case ConnectionType.hanging_turn_around:
+                    Vector3 mid = ReturnCornerDir(curPoint, targetPoint, 0);
+                    mid += curPoint.transform.right * 0.05f;
+                    desiredPos = mid;
+                    targetState = ClimbStates.betweenPoints;
+                    break;
+
+                case ConnectionType.corner_in:
+                case ConnectionType.corner_out:
+                    Vector3 corner = ReturnCornerDir(curPoint, targetPoint, 0.2f);
+
+                    if (n.cType == ConnectionType.corner_in)
+                        corner = ReturnCornerDir(curPoint, targetPoint, 0);
+
+                    desiredPos = corner;
+                    targetState = ClimbStates.betweenPoints;
+                    TransitDir cDir = ReturnTransitDirection(inputD, false);
+                    PlayAnim(cDir);
+                    break;
+                case ConnectionType.hanging_jump_air:
                     break;
             }
             switch (targetPoint.pointType)
@@ -1367,6 +1908,16 @@ namespace Climbing
                     break;
             }
             targetPosition = desiredPos;
+        }
+
+        private Vector3 ReturnCornerDir(Point cp, Point tp, float multiplier=1)
+        {
+            Vector3 cpPos = (-cp.transform.forward * multiplier) + cp.transform.position;
+            Vector3 tpPos = (-tp.transform.forward * multiplier) + tp.transform.position;
+            Vector3 direction = tpPos - cpPos;
+            float distance = Vector3.Distance(cpPos, tpPos);
+            Vector3 wp = cpPos + (direction * (distance / 2));
+            return wp;
         }
 
         private Vector3 ConvertToInputDirection(float horizontal, float vertical)
@@ -1524,7 +2075,10 @@ namespace Climbing
                     target = 2;
                     break;
                 case TransitDir.j_back:
-                    target = 0;
+                    target = 33;
+                    break;
+                case TransitDir.h_j_forward:
+                    target = 44;
                     break;
             }
             anim.SetInteger("JumpType", target);
@@ -1543,7 +2097,8 @@ namespace Climbing
             j_left,
             j_right,
             j_back,
-            j_forward
+            j_forward,
+            h_j_forward
         }
 
         #endregion
@@ -1615,5 +2170,37 @@ namespace Climbing
         {
             enableRootMovement = true;
         }
+
+        bool InAngle(Point cp, Point tp, AngleCheck check)
+        {
+            bool r = false;
+
+            float angl = Vector3.Angle(cp.transform.forward, tp.transform.forward);
+
+            switch (check)
+            {
+                case AngleCheck.skip:
+                    r = true;
+                    break;
+                case AngleCheck.forward:
+                    if (angl < 25)
+                        r = true;
+                    break;
+                case AngleCheck.opposite:
+                    if (angl > 155)
+                        r = true;
+                    break;
+                default:
+                    break;
+            }
+
+            return r;
+        }
+    }
+    public enum AngleCheck
+    {
+        skip,
+        forward,
+        opposite
     }
 }

@@ -80,7 +80,14 @@ namespace Climbing
         direct,
         dismount,
         fall,
-        jumpBack
+        jumpBack,
+        corner_in,
+        corner_out,
+        hanging_turn_around,
+        jumpBack_onManager,
+        hanging_jump_forward,
+        hanging_linear_forward,
+        hanging_jump_air
     }
     public enum PointType
     {
