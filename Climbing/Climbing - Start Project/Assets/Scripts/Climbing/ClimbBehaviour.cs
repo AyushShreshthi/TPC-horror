@@ -36,6 +36,7 @@ namespace Climbing
         Neighbour dismountNeighbour;
         Neighbour fallNeighbour;
         Neighbour jumpBackNeighbour;
+        Neighbour jumpForwardNeighbour;
 
         ClimbStates climbState;
         ClimbStates targetState;
@@ -58,8 +59,8 @@ namespace Climbing
         bool rootReached;
         bool ikLandSideReached;
         bool ikFollowSideReached;
-        bool skipDepthCheck;
         bool skipAngleCheck;
+        bool skipDepthCheck;
 
         bool lockInput;
         Vector3 inputDirection;
@@ -84,6 +85,7 @@ namespace Climbing
         AngleCheck curAngleCheck;
         #endregion
 
+        #region Starting
         void SetCurveReferences()
         {
             GameObject chPrefab = Resources.Load("CurvesHolder") as GameObject;
@@ -107,12 +109,19 @@ namespace Climbing
             dismountNeighbour.target = dismountPointGO.GetComponentInChildren<Point>();
             dismountNeighbour.target.dismountPoint = true;
             dismountNeighbour.cType = ConnectionType.dismount;
+            dismountNeighbour.customConnection = true;
 
             fallNeighbour = new Neighbour();
             fallNeighbour.cType = ConnectionType.fall;
+            fallNeighbour.customConnection = true;
 
             jumpBackNeighbour = new Neighbour();
             jumpBackNeighbour.cType = ConnectionType.jumpBack;
+            jumpBackNeighbour.customConnection = true;
+
+            jumpForwardNeighbour = new Neighbour();
+            jumpForwardNeighbour.cType = ConnectionType.hanging_jump_air;
+            jumpForwardNeighbour.customConnection = true;
 
             lm = (1 << gameObject.layer) | (1 << 3);
             lm = ~lm;
@@ -200,6 +209,8 @@ namespace Climbing
                 }
             }
         }
+
+        #endregion
 
         #region Neighbour Manager
 
@@ -331,7 +342,7 @@ namespace Climbing
             {
                 if (angle < targetAngle + 22.5f && angle > targetAngle - 22.5f)
                 {
-                    if (Mathf.Abs(depthAngle) > 60 && Mathf.Abs(depthAngle) < 100)
+                    if (Mathf.Abs(depthAngle) > 60 && Mathf.Abs(depthAngle) < 100 || skipDepthCheck)
                     {
 
                         return true;
@@ -435,6 +446,7 @@ namespace Climbing
                         dismountPointGO.transform.position = gp;
                         dismountPointGO.transform.rotation = transform.rotation;
                         retVal = true;
+
                     }
                 }
 
@@ -488,20 +500,20 @@ namespace Climbing
             Manager retVal = null;
 
             RaycastHit hit;
-            Vector3 origin = transform.position + -transform.forward;
+            Vector3 origin = transform.position;// + -transform.forward;
             Vector3 direction = transform.right * x;
 
-            Debug.DrawRay(origin, direction * 5);
+            Debug.DrawRay(origin, direction * 1);//5
 
-            bool hitSides = GetHit(origin, direction, 2, lm);
+            bool hitSides = GetHit(origin, direction, 1, lm);//2
            
             if (hitSides == false)
             {
-                Vector3 towardsOrigin = origin + direction*5;
+                Vector3 towardsOrigin = origin + direction*1;//5
 
-                Debug.DrawRay(towardsOrigin, transform.forward * 5);
+                Debug.DrawRay(towardsOrigin, transform.forward * 5);//5
 
-                if(Physics.Raycast(towardsOrigin,transform.forward,out hit, 5, lm))
+                if(Physics.Raycast(towardsOrigin,transform.forward,out hit, 5, lm))//5
                 {
                     if (hit.transform.root.GetComponentInChildren<Manager>())
                     {
@@ -597,7 +609,52 @@ namespace Climbing
             return retval;
         }
 
-        Manager LookForManager_Around()
+        Manager LookForManager_Corner(Vector3 inpd)
+        {
+            Manager retVal = null;
+
+            Vector3 origin = curPoint.transform.position;
+            Vector3 sides = curPoint.transform.right * inpd.x;
+            bool clearSides = GetHit(origin, sides, 1, lm);
+            Debug.DrawRay(origin, sides * 1, Color.red);
+            if (!clearSides)
+            {
+                Vector3 newOrigin = origin + sides;
+                bool clearForward = GetHit(newOrigin, curPoint.transform.forward, 1, lm);
+                Debug.DrawRay(newOrigin, transform.forward * 1, Color.yellow);
+                if (!clearForward)
+                {
+                    Vector3 cornerOrigin = newOrigin + transform.forward;
+                    Vector3 cornerDir = curPoint.transform.right * -inpd.x;
+                    Debug.DrawRay(cornerOrigin, cornerDir * 2, Color.blue);
+                    RaycastHit cornerhit;
+                    if(Physics.Raycast(cornerOrigin,cornerDir,out cornerhit, 2, lm))
+                    {
+                        if (cornerhit.transform.GetComponentInChildren<Manager>())
+                        {
+                            Manager m = cornerhit.transform.GetComponentInChildren<Manager>();
+                            retVal = m;
+                        }
+                    }
+                }
+                
+            }
+            return retVal;
+        }
+        Neighbour CheckManagerCorner(Vector3 inpD,Manager targetManager)
+        {
+            Neighbour n = new Neighbour();
+            Point tp = null;
+
+            if (targetManager != null)
+            {
+                tp = ReturnPoint(inpD, curPoint, targetManager);
+
+            }
+            n.target = tp;
+            return n;
+        }
+         Manager LookForManager_Around()
         {
             Manager retVal = null;
             Vector3 origin = curPoint.transform.position + transform.forward;
@@ -662,6 +719,7 @@ namespace Climbing
                 if (CanDismount())
                 {
                     n = dismountNeighbour;
+
                     return n;
                 }
                 else
@@ -713,14 +771,8 @@ namespace Climbing
 
                 if (distance < minDistance)
                 {
-                    if (distance == 0)
-                    {
-                        n.cType = ConnectionType.fall;
-                    }
-                    else
-                    {
-                        n.cType = (distance < directThreshold) ? ConnectionType.inBetween : ConnectionType.direct;
-                    }
+                    n.cType = (distance < directThreshold) ? ConnectionType.inBetween : ConnectionType.direct;
+
                     if(n.cType == ConnectionType.direct && inpD.x != 0 && inpD.y != 0)
                     {
                         n.target = null;
@@ -758,6 +810,9 @@ namespace Climbing
                 enableRootMovement = false;
                 ikFollowSideReached = false;
                 ikLandSideReached = false;
+                init_JumpBack = false;
+                init_JumpForward = false;
+
                 _t = 0;
                 rotationT = 0;
                 _startPos = transform.position;
@@ -953,7 +1008,7 @@ namespace Climbing
                     WrapUp(true);
                     break;
                 case ConnectionType.hanging_jump_air:
-                    //JumpForward();
+                    JumpForward();
                     break;
                 case ConnectionType.hanging_turn_around:
                     UpdateLinearvariables();
@@ -962,13 +1017,12 @@ namespace Climbing
                     HandleRotation_Controlled(-90, 2);
                     WrapUp();
                     break;
-                case ConnectionType.corner_in:
-                case ConnectionType.corner_out:
-                    UpdateLinearvariables();
-                    Linear_RootMovement();
-                    LerpIKLandingSide_Linear();
-                    WrapUp();
-                    break;
+                case ConnectionType.corner:
+                   UpdateLinearvariables();
+                   Linear_RootMovement();
+                   LerpIKLandingSide_Linear();
+                   WrapUp();
+                   break;
             }
         }
 
@@ -1241,6 +1295,8 @@ namespace Climbing
                 rootReached = false;
                 ikFollowSideReached = false;
                 ikLandSideReached = false;
+                init_JumpBack = false;
+                init_JumpForward = false;
                 _t = 0;
                 rotationT = 0;
                 _rmT = 0;
@@ -1436,7 +1492,8 @@ namespace Climbing
                 rootReached = false;
                 ikFollowSideReached = false;
                 ikLandSideReached = false;
-
+                init_JumpForward = false;
+                init_JumpBack = false;
                 _t = 0;
                 rotationT = 0;
                 _startPos = transform.position;
@@ -1680,6 +1737,7 @@ namespace Climbing
             Neighbour n = new Neighbour();
             Point tp = null;
             skipAngleCheck = false;
+            skipDepthCheck = false;
 
             tp = ReturnPoint(inpD, curPoint, targetManager);
 
@@ -1693,10 +1751,20 @@ namespace Climbing
                 if (inpD.z > 0)
                 {
                     targetManager = LookForManager_Forward();
-                    n = CheckForManagerAhead(inpD, targetManager);
-                    n.cType = ConnectionType.hanging_jump_forward;
-                    tp = n.target;
-                    return n;
+                    if (targetManager != null)
+                    {
+                        n = CheckForManagerAhead(inpD, targetManager);
+                        n.cType = ConnectionType.hanging_jump_forward;
+                        tp = n.target;
+                        return n;
+                    }
+                    else
+                    {
+                        n = jumpForwardNeighbour;
+                        n.target = curPoint;
+                        skipAngleCheck = false;
+                        return n;
+                    }
                 }
                 if (inpD.z < 0)
                 {
@@ -1707,6 +1775,17 @@ namespace Climbing
                    //     tp = n.target;
                    //     return n;
                    // }
+                }
+
+                if (inpD.x != 0)
+                {
+                    skipDepthCheck = true;
+                    skipAngleCheck = true;
+                    targetManager = LookForManager_Corner(inpD);
+                    n = CheckManagerCorner(inpD, targetManager);
+                    tp = n.target;
+                    n.cType = ConnectionType.corner;
+                    return n;
                 }
             }
 
@@ -1725,7 +1804,8 @@ namespace Climbing
             Point tp = null;
             
             //curAngleCheck=AngleCheck.skip;
-            //skipDepthCheck = false;
+            skipDepthCheck = false;
+            skipAngleCheck = false;
 
             #region CheckBehind
 
@@ -1811,6 +1891,16 @@ namespace Climbing
                 //}
                 #endregion 
 
+                if(tp==null && inpD.x != 0)
+                {
+                    skipDepthCheck = true;
+                    skipAngleCheck = true;
+                    targetManager = LookForManager_Corner(inpD);
+                    n = CheckManagerCorner(inpD, targetManager);
+                    tp = n.target;
+                    n.cType = ConnectionType.corner;
+                    return n;
+                }
             }
             n.target = tp;
             n = DoConnectionTypeChecks(inpD, n);
@@ -1851,6 +1941,7 @@ namespace Climbing
                 case ConnectionType.dismount:
                     desiredPos = targetPoint.transform.position;
                     anim.SetInteger("JumpType", 20);
+
                     anim.SetBool("Move", true);
                     break;
                 case ConnectionType.fall:
@@ -1879,14 +1970,17 @@ namespace Climbing
                     targetState = ClimbStates.betweenPoints;
                     break;
 
-                case ConnectionType.corner_in:
-                case ConnectionType.corner_out:
-                    Vector3 corner = ReturnCornerDir(curPoint, targetPoint, 0.2f);
+                case ConnectionType.corner:
+                    
+                    Vector3 cornerOffset = (curPoint.transform.right * direction.x) * 0.5f;
+                    cornerOffset += curPoint.transform.forward * 0.5f;
+                    if (curPoint.pointType == PointType.hanging)
+                    {
+                        cornerOffset = (curPoint.transform.right * direction.x) * 0.1f;
+                        cornerOffset += curPoint.transform.forward * 0.1f;
+                    }
 
-                    if (n.cType == ConnectionType.corner_in)
-                        corner = ReturnCornerDir(curPoint, targetPoint, 0);
-
-                    desiredPos = corner;
+                    desiredPos = curPoint.transform.position + cornerOffset;
                     targetState = ClimbStates.betweenPoints;
                     TransitDir cDir = ReturnTransitDirection(inputD, false);
                     PlayAnim(cDir);
@@ -2107,7 +2201,6 @@ namespace Climbing
 
         float rotationT;
         float targetAngle;
-        bool jumpBack;
         bool init_JumpBack;
 
         void JumpBackwards()
@@ -2157,11 +2250,46 @@ namespace Climbing
             anim.SetBool("climbing", false);
             anim.SetBool("Jump", false);
             init_JumpBack = false;
-            jumpBack = false;
+            init_JumpForward = false;
         }
 
         #endregion
 
+        #region JumpForward
+
+        bool init_JumpForward;
+        void JumpForward()
+        {
+            if (!init_JumpForward)
+            {
+                anim.applyRootMotion = false;
+                init_JumpForward = true;
+                states.EnableController();
+                states.hMovement.rb.isKinematic = true;
+                anim.SetBool("Jump", true);
+                anim.SetInteger("JumpType", 55);
+                enableRootMovement = false;
+            }
+            if (enableRootMovement)
+            {
+                ik.AddWeightInfluenceAll(0);
+            }
+        }
+
+        void AddJumpForwardForce()
+        {
+            states.hMovement.rb.isKinematic = false;
+            StartCoroutine("JumpForwardForce");
+            enableRootMovement = true;
+        }
+        IEnumerator JumpForwardForce()
+        {
+            yield return new WaitForEndOfFrame();
+            states.hMovement.rb.AddForce((transform.forward * 5) + (Vector3.up * 2), ForceMode.Impulse);
+        }
+        #endregion
+
+        #region useful
         public void UnHold()
         {
             hold = false;
@@ -2196,6 +2324,8 @@ namespace Climbing
 
             return r;
         }
+
+        #endregion
     }
     public enum AngleCheck
     {
