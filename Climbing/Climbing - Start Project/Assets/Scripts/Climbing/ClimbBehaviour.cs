@@ -518,6 +518,7 @@ namespace Climbing
                     if (hit.transform.root.GetComponentInChildren<Manager>())
                     {
                         retVal = hit.transform.root.GetComponentInChildren<Manager>();
+
                     }
                 }
             }
@@ -678,9 +679,10 @@ namespace Climbing
 
             Vector3 worldP = curPoint.transform.position;
             RaycastHit hit;
-            Debug.DrawRay(worldP, transform.forward * 5);
-            if(Physics.Raycast(worldP,transform.forward,out hit, 2, lm))
+            Debug.DrawRay(worldP, transform.forward * 15,Color.blue);
+            if(Physics.Raycast(worldP,transform.forward,out hit,15, lm))
             {
+               
                 if (hit.transform.GetComponentInChildren<Manager>())
                 {
                     Manager m = hit.transform.GetComponentInChildren<Manager>();
@@ -754,6 +756,7 @@ namespace Climbing
                     if (targetManager != null)
                     {
                         tp = ReturnPoint(inpD, curPoint, targetManager);
+
                     }
                 }
             }
@@ -1623,7 +1626,6 @@ namespace Climbing
             {
                 targetPoint = curPoint;
             }
-
             targetPosition = targetPoint.transform.position;
             climbState = ClimbStates.inTransit;
             targetState = ClimbStates.onPoint;
@@ -1739,12 +1741,16 @@ namespace Climbing
             skipAngleCheck = false;
             skipDepthCheck = false;
 
+            inpD.z = inpD.y;
+            inpD.y = 0;
+
             tp = ReturnPoint(inpD, curPoint, targetManager);
 
             if (tp == null)
             {
                 n = CheckForNearManager(inpD, targetManager);
                 tp = n.target;
+
             }
             if (tp == null)
             {
@@ -1791,7 +1797,6 @@ namespace Climbing
 
             if (tp == null)
                 return null;
-
             n.target = tp;
             n = DoConnectionTypeChecks(inpD, n,true);
 
@@ -1846,7 +1851,7 @@ namespace Climbing
             {
                 n = CheckForNearManager(inpD, targetManager);
                 tp = n.target;
-
+                print(tp);
                 #region dhyan mein rkhna ise 
 
                 //if (tp == null && inpD.x != 0)
