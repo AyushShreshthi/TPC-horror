@@ -9,6 +9,7 @@ namespace Climbing
     {
         public PointType pointType;
         public bool dismountPoint;
+        public bool doubleSided;
         public List<Neighbour> neighbours = new List<Neighbour>();
         public List<IKPositions> iks = new List<IKPositions>();
 
@@ -85,7 +86,8 @@ namespace Climbing
         hanging_turn_around,
         hanging_jump_forward,
         hanging_jump_air,
-        corner
+        corner_in,
+        corner_out
     }
     public enum PointType
     {

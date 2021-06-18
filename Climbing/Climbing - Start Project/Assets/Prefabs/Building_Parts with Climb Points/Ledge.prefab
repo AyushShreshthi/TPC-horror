@@ -212,7 +212,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1042303058783760276}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.511, y: -0.00000017881393, z: -0.000000461936}
+  m_LocalPosition: {x: 0.511, y: 0.1, z: -0.000000461936}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 2933189202812732296}
@@ -465,7 +465,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3119679810376382109}
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.5079999, y: -0.00000017881393, z: -0.000000461936}
+  m_LocalPosition: {x: -0.5079999, y: 0.1, z: -0.000000461936}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 7587809842105359891}
@@ -517,6 +517,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   pointType: 0
+  dismountPoint: 0
+  doubleSided: 0
   neighbours: []
   iks:
   - ik: 2
@@ -900,6 +902,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   pointType: 0
+  dismountPoint: 0
+  doubleSided: 0
   neighbours: []
   iks:
   - ik: 2
@@ -1152,7 +1156,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5435460979591793449}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -1.008, y: -0, z: -0}
+  m_LocalPosition: {x: -1.008, y: 0.1, z: -0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 6132749999487579176}
@@ -1446,6 +1450,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   pointType: 0
+  dismountPoint: 0
+  doubleSided: 0
   neighbours: []
   iks:
   - ik: 2
@@ -1546,7 +1552,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6565190913494617478}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.994, y: -0.00000017881393, z: -0.000000461936}
+  m_LocalPosition: {x: 0.994, y: 0.1, z: -0.000000461936}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_Children:
   - {fileID: 726424611144220396}
@@ -1690,6 +1696,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   pointType: 0
+  dismountPoint: 0
+  doubleSided: 0
   neighbours: []
   iks:
   - ik: 2

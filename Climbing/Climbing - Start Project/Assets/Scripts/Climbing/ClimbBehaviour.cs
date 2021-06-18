@@ -59,7 +59,6 @@ namespace Climbing
         bool rootReached;
         bool ikLandSideReached;
         bool ikFollowSideReached;
-        bool skipAngleCheck;
         bool skipDepthCheck;
 
         bool lockInput;
@@ -362,10 +361,7 @@ namespace Climbing
             {
                 float tempDist = Vector3.Distance(cp.transform.position, l[i].transform.position);
 
-                bool inAngle = (skipAngleCheck) ? true :
-                    (Vector3.Angle(cp.transform.forward, l[i].transform.forward) < 25);
-
-                    //InAngle(curPoint, l[i], curAngleCheck);
+                bool inAngle = InAngle(curPoint, l[i], curAngleCheck);
 
                 if (tempDist < minDist && l[i] != cp && inAngle)
                 {
@@ -387,7 +383,7 @@ namespace Climbing
             retval = tp;
             if (retval != null)
             {
-                //lastCheckedManager = curManager;
+                lastCheckedManager = curManager;
                 curManager = m;
             }
             return retval;
@@ -482,9 +478,12 @@ namespace Climbing
         {
             if (p.pointType == PointType.hanging)
             {
-                Vector3 targetP = Vector3.zero;
-                targetP.y = -1.5f;
-                p.transform.localPosition = targetP;
+                //Vector3 targetP = Vector3.zero;
+                //targetP.y = -1.5f;
+                //p.transform.localPosition = targetP;
+
+                // we might chage this in future
+
             }
             if (p.pointType == PointType.braced)
             {
@@ -500,16 +499,16 @@ namespace Climbing
             Manager retVal = null;
 
             RaycastHit hit;
-            Vector3 origin = transform.position;// + -transform.forward;
+            Vector3 origin = transform.position + -transform.forward;
             Vector3 direction = transform.right * x;
 
-            Debug.DrawRay(origin, direction * 1);//5
+            Debug.DrawRay(origin, direction * 5);//5
 
-            bool hitSides = GetHit(origin, direction, 1, lm);//2
+            bool hitSides = GetHit(origin, direction, 2, lm);//2
            
             if (hitSides == false)
             {
-                Vector3 towardsOrigin = origin + direction*1;//5
+                Vector3 towardsOrigin = origin + direction*5;//5
 
                 Debug.DrawRay(towardsOrigin, transform.forward * 5);//5
 
@@ -562,13 +561,14 @@ namespace Climbing
             Vector3 origin = curPoint.transform.position;
             Vector3 sides = curPoint.transform.right * inpD.x;
             RaycastHit hit;
-            Debug.DrawRay(origin, sides * 1, Color.yellow);
+            Debug.DrawRay(origin, sides * 1, Color.red);
 
             if(Physics.Raycast(origin,sides,out hit, 1, lm))
             {
                 if (hit.transform.GetComponentInChildren<Manager>())
                 {
                     Manager m = hit.transform.GetComponentInChildren<Manager>();
+
                     retVal = m;
                 }
             }
@@ -602,6 +602,7 @@ namespace Climbing
                         if (cornerHit.transform.GetComponentInChildren<Manager>())
                         {
                             Manager m = cornerHit.transform.GetComponentInChildren<Manager>();
+
                             retval = m;
                         }
                     }
@@ -797,8 +798,8 @@ namespace Climbing
                     }
                 }
             }
-            //if (n.target == null)
-              //  curManager = lastCheckedManager;
+            if (n.target == null)
+                curManager = lastCheckedManager;
             return n;
         }
 
@@ -874,7 +875,20 @@ namespace Climbing
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, rotationT);
 
         }
+        void HandleRotationLocal()
+        {
+            if (!init_JumpBack)
+            {
 
+                rotationT = 0;
+                init_JumpBack = true;
+            }
+
+            Quaternion targetRot = curPoint.transform.localRotation;
+
+            rotationT += Time.deltaTime * 2;
+            transform.localRotation = Quaternion.Slerp(transform.localRotation, targetRot, rotationT);
+        }
         private void HandleWeightAll(float t, AnimationCurve aCurve)
         {
             float inf = aCurve.Evaluate(t);
@@ -941,7 +955,15 @@ namespace Climbing
                 float v = Input.GetAxis("Vertical");
 
                 inputDirection = ConvertToInputDirection(h, v);
-
+                if (climbState == ClimbStates.onPoint)
+                {
+                    float debugAngle = Vector3.Angle(curPoint.transform.forward, transform.forward);
+                    if (debugAngle > 1)
+                    {
+                        inputDirection = Vector3.zero;
+                        HandleRotationLocal();
+                    }
+                }
                 if (inputDirection != Vector3.zero)
                 {
                     switch (climbState)
@@ -1020,7 +1042,8 @@ namespace Climbing
                     HandleRotation_Controlled(-90, 2);
                     WrapUp();
                     break;
-                case ConnectionType.corner:
+                case ConnectionType.corner_in:
+                case ConnectionType.corner_out:
                    UpdateLinearvariables();
                    Linear_RootMovement();
                    LerpIKLandingSide_Linear();
@@ -1615,7 +1638,7 @@ namespace Climbing
         #region Others
         private void BetweenPoints(Vector3 inD)
         {
-            Neighbour n = targetPoint.ReturnNeighbour(prevPoint);
+            Neighbour n = ReturnNeighbour(inD, curPoint, curManager);
 
             if (n != null)
             {
@@ -1636,8 +1659,8 @@ namespace Climbing
 
         private void OnPoint(Vector3 inD)
         {
-            //curAngleCheck = AngleCheck.skip;
-            skipAngleCheck = true;
+            curAngleCheck = AngleCheck.skip;
+
             neighbour = null;
             Neighbour targetNeighbour = null;
             Manager targetManager = curManager;
@@ -1652,69 +1675,6 @@ namespace Climbing
                     break;
             }
             neighbour = targetNeighbour;
-
-            #region faltu
-            //jumpBack = false;
-
-            //neighbour = null;
-
-            //Manager targetManager = curManager;
-
-            //if (lookOnZ)
-            //{
-            //    inD.z = inD.y;
-            //    inD.y = 0;
-            //    targetManager = LookForManagerBehind();
-
-            //    if (targetManager == null)
-            //    {
-            //        jumpBack = true;
-            //        neighbour = jumpBackNeighbour;
-            //        jumpBackNeighbour.target = curPoint;
-            //    }
-            //}
-
-            //if(!jumpBack)
-            //     neighbour = ReturnNeighbour(inD, curPoint,targetManager);
-
-            //if(neighbour==null && !lookOnZ)
-            //{
-            //    if (inD.y > 0)
-            //    {
-            //        if (CanDismount())
-            //        {
-            //            neighbour = dismountNeighbour;
-            //        }
-            //        else
-            //        {
-            //            targetManager = LookForManager(transform.up);
-            //            if (targetManager != null)
-            //                neighbour = ReturnNeighbour(inD, curPoint, targetManager);
-            //        }
-            //    }
-            //    if (inD.y < 0)
-            //    {
-            //        targetManager = LookForManager(-transform.up);
-            //        if (targetManager != null && targetManager!=curManager)
-            //            neighbour = ReturnNeighbour(inD, curPoint, targetManager);
-
-            //        else if (CanFall())
-            //        {
-            //            fallNeighbour.target = curPoint;
-            //            neighbour = fallNeighbour;
-            //        }
-            //    }
-            //    if (inD.x != 0)
-            //    {
-            //        Manager managerSides = LookForManagerSides(inputDirection.x);
-
-            //        if (managerSides != null)
-            //        {
-            //            neighbour = ReturnNeighbour(inD, curPoint, managerSides);
-            //        }
-            //    }
-            //}
-            #endregion
 
             if (neighbour != null )
             {
@@ -1738,7 +1698,7 @@ namespace Climbing
 
             Neighbour n = new Neighbour();
             Point tp = null;
-            skipAngleCheck = false;
+            curAngleCheck = AngleCheck.forward;
             skipDepthCheck = false;
 
             inpD.z = inpD.y;
@@ -1768,30 +1728,70 @@ namespace Climbing
                     {
                         n = jumpForwardNeighbour;
                         n.target = curPoint;
-                        skipAngleCheck = false;
                         return n;
                     }
-                }
+                }else
                 if (inpD.z < 0)
                 {
-                   // if (curPoint.doubleSided)
-                   // {
-                   //     n.cType = ConnectionType.hanging_turn_around;
-                   //     n.target = curPoint;
-                   //     tp = n.target;
-                   //     return n;
-                   // }
-                }
+                    if (curPoint.doubleSided)
+                    {
+                        targetManager = LookForManager_Around();
 
+                        if (targetManager != null)
+                        {
+                            curAngleCheck = AngleCheck.opposite;
+                            tp = ReturnPoint(-inpD, curPoint, targetManager);
+                            n.cType = ConnectionType.hanging_turn_around;
+                            n.target = tp;
+                            n.customConnection = true;
+                            return n;
+                        }
+                    }
+                }
+                else
                 if (inpD.x != 0)
                 {
                     skipDepthCheck = true;
-                    skipAngleCheck = true;
-                    targetManager = LookForManager_Corner(inpD);
-                    n = CheckManagerCorner(inpD, targetManager);
-                    tp = n.target;
-                    n.cType = ConnectionType.corner;
-                    return n;
+                    curAngleCheck = AngleCheck.skip;
+                    targetManager = LookForManager_Corner_In(inpD);
+
+                    if (targetManager != null)
+                    {
+                        n = CheckManagerCorner(inpD, targetManager);
+                        tp = n.target;
+                        n.cType = ConnectionType.corner_in;
+
+                        if (n.target != null)
+                        {
+                            float dis = Vector2.Distance(curPoint.transform.parent.position,
+                                n.target.transform.parent.position);
+                            if (dis > directThreshold)
+                            {
+                                n.target = null;
+                            }
+                        }
+
+                        return n;
+                    }
+                    else
+                    {
+                        targetManager = LookForManager_Corner_Out(inpD);
+                        n = CheckManagerCorner(inpD, targetManager);
+                        tp = n.target;
+                        n.cType = ConnectionType.corner_out;
+                        print(targetManager);
+                        if (n.target != null)
+                        {
+                            float dis = Vector2.Distance(curPoint.transform.parent.position, 
+                                n.target.transform.parent.position);
+                            if (dis > directThreshold)
+                            {
+                                n.target = null;
+                            }
+                        }
+
+                        return n;
+                    }
                 }
             }
 
@@ -1799,7 +1799,7 @@ namespace Climbing
                 return null;
             n.target = tp;
             n = DoConnectionTypeChecks(inpD, n,true);
-
+            PlaceIK(n.target);
             return n;
         }
 
@@ -1808,9 +1808,8 @@ namespace Climbing
             Neighbour n = new Neighbour();
             Point tp = null;
             
-            //curAngleCheck=AngleCheck.skip;
+            curAngleCheck=AngleCheck.forward;
             skipDepthCheck = false;
-            skipAngleCheck = false;
 
             #region CheckBehind
 
@@ -1828,12 +1827,12 @@ namespace Climbing
                     {
                         n = jumpBackNeighbour;
                         jumpBackNeighbour.target = curPoint;
-                        skipAngleCheck = false;
+                        //skipAngleCheck = false;
                         return n;
                     }
                     else
                     {
-                        //curAngleCheck = AngleCheck.opposite;
+                        curAngleCheck = AngleCheck.opposite;
                         n.cType = ConnectionType.jumpBack_onManager;
                         tp = ReturnPoint(inpD, curPoint, targetManager);
                         n.target = tp;
@@ -1844,69 +1843,57 @@ namespace Climbing
 
             #endregion
 
-            skipAngleCheck = false;
             tp = ReturnPoint(inpD, curPoint, targetManager);
 
             if (tp == null && !lookOnZ)
             {
                 n = CheckForNearManager(inpD, targetManager);
                 tp = n.target;
-                print(tp);
-                #region dhyan mein rkhna ise 
 
-                //if (tp == null && inpD.x != 0)
-                //{
-                //    skipDepthCheck = true;
-                //    curAngleCheck = AngleCheck.skip;
-                //    targetManager = LookForManager_Corner_In(inpD);
-
-                //    if (targetManager != null)
-                //    {
-                //       // n = CheckManagerCorner(inpD, targetManager);
-                //        tp = n.target;
-                //        n.cType = ConnectionType.corner_in;
-
-                //        if (n.target != null)
-                //        {
-                //           float dis= Vector2.Distance(curPoint.transform.parent.position, n.target.transform.parent.position);
-                //            if (dis > directThreshold)
-                //            {
-                //                n.target = null;
-                //            }
-                //        }
-
-                //        return n;
-                //    }
-                //    else
-                //    {
-                //        targetManager = LookForManager_Corner_Out(inpD);
-                //       // n = CheckManagerCorner(inpD, targetManager);
-                //        tp = n.target;
-                //        n.cType = ConnectionType.corner_out;
-                //        if (n.target != null)
-                //        {
-                //            float dis = Vector2.Distance(curPoint.transform.parent.position, n.target.transform.parent.position);
-                //            if (dis > directThreshold)
-                //            {
-                //                n.target = null;
-                //            }
-                //        }
-                //        return n;
-                //    }
-                //}
-                #endregion 
-
-                if(tp==null && inpD.x != 0)
+                if (tp == null && inpD.x != 0)
                 {
                     skipDepthCheck = true;
-                    skipAngleCheck = true;
-                    targetManager = LookForManager_Corner(inpD);
-                    n = CheckManagerCorner(inpD, targetManager);
-                    tp = n.target;
-                    n.cType = ConnectionType.corner;
-                    return n;
-                }
+                    curAngleCheck = AngleCheck.skip;
+                    targetManager = LookForManager_Corner_In(inpD);
+
+                    if (targetManager != null)
+                    {
+                         n = CheckManagerCorner(inpD, targetManager);
+                        tp = n.target;
+                        n.cType = ConnectionType.corner_in;
+
+                        if (n.target != null)
+                        {
+                            float dis = Vector2.Distance(curPoint.transform.parent.position, n.target.transform.parent.position);
+                            if (dis > directThreshold)
+                            {
+                                n.target = null;
+                            }
+                        }
+
+                        return n;
+                    }
+                    else
+                    {
+                        targetManager = LookForManager_Corner_Out(inpD);
+                         n = CheckManagerCorner(inpD, targetManager);
+                        tp = n.target;
+                        n.cType = ConnectionType.corner_out;
+                        if (n.target != null)
+                        {
+                            float dis = Vector2.Distance(curPoint.transform.parent.position, n.target.transform.parent.position);
+                            if (dis > directThreshold)
+                            {
+                                n.target = null;
+                            }
+
+                        }
+                        return n;
+                    }
+                } 
+
             }
+           
             n.target = tp;
             n = DoConnectionTypeChecks(inpD, n);
 
@@ -1975,17 +1962,14 @@ namespace Climbing
                     targetState = ClimbStates.betweenPoints;
                     break;
 
-                case ConnectionType.corner:
-                    
-                    Vector3 cornerOffset = (curPoint.transform.right * direction.x) * 0.5f;
-                    cornerOffset += curPoint.transform.forward * 0.5f;
-                    if (curPoint.pointType == PointType.hanging)
-                    {
-                        cornerOffset = (curPoint.transform.right * direction.x) * 0.1f;
-                        cornerOffset += curPoint.transform.forward * 0.1f;
-                    }
+                case ConnectionType.corner_in:
+                case ConnectionType.corner_out:
 
-                    desiredPos = curPoint.transform.position + cornerOffset;
+                    Vector3 corner = ReturnCornerDir(curPoint, targetPoint, 0.2f);
+                    if (n.cType == ConnectionType.corner_in)
+                        corner = ReturnCornerDir(curPoint, targetPoint, 0);
+
+                    desiredPos = corner;
                     targetState = ClimbStates.betweenPoints;
                     TransitDir cDir = ReturnTransitDirection(inputD, false);
                     PlayAnim(cDir);
