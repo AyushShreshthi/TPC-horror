@@ -64,8 +64,10 @@ namespace Climbing
     public class IKPositions
     {
         public AvatarIKGoal ik;
-        public Transform target;
-        public Transform hint;
+        public Vector3 ikPos;
+        public Vector3 hintPos;
+        public AvatarIKHint ikHint;
+        public bool hasHint;
     }
     [System.Serializable]
     public class Neighbour

@@ -18,7 +18,7 @@ namespace Climbing
             }
             for(int i = 0; i < t.ikPos.Count; i++)
             {
-                if (t.ikPos[i].target != null)
+                if (t.ikPos[i].ik != null)
                 {
                     Color targetColor = Color.red;
 
@@ -41,11 +41,11 @@ namespace Climbing
                     }
                     Handles.color = targetColor;
 
-                    Handles.CubeCap(0, t.ikPos[i].target.position, t.ikPos[i].target.rotation, 0.05f);
+                    //Handles.CubeCap(0, t.ikPos[i].ikPos, t.ikPos[i].ikPos, 0.05f);
 
-                    if (t.ikPos[i].hint != null)
+                    if (t.ikPos[i].ikHint != null)
                     {
-                        Handles.CubeCap(0, t.ikPos[i].hint.position, t.ikPos[i].hint.rotation, 0.05f);
+                       // Handles.CubeCap(0, t.ikPos[i].ikHint.position, t.ikPos[i].ikHint.rotation, 0.05f);
 
                     }
                 }

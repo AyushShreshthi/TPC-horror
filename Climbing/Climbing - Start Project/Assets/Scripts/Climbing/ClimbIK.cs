@@ -34,6 +34,7 @@ namespace Climbing
         Transform hips;
 
         public bool forceFeetHeight;
+        public PointStats pointD;
 
         private void Start()
         {
@@ -80,21 +81,15 @@ namespace Climbing
 
         public void UpdateAllTargetPositions(Point p)
         {
-            IKPositions lhHolder = p.ReturnIK(AvatarIKGoal.LeftHand); 
-            if (lhHolder.target)
-                lhTargetPosition = lhHolder.target.position;
+            
+            lhTargetPosition = CreateIKPos(p, AvatarIKGoal.LeftHand);
 
-            IKPositions rhHolder = p.ReturnIK(AvatarIKGoal.RightHand); 
-            if (rhHolder.target)
-                rhTargetPosition = rhHolder.target.position;
+            rhTargetPosition = CreateIKPos(p, AvatarIKGoal.RightHand);
 
-            IKPositions lfHolder = p.ReturnIK(AvatarIKGoal.LeftFoot); 
-            if (lfHolder.target)
-                lfTargetPosition = lfHolder.target.position;
+            lfTargetPosition = CreateIKPos(p, AvatarIKGoal.LeftFoot);
 
-            IKPositions rfHolder = p.ReturnIK(AvatarIKGoal.RightFoot);
-            if (rfHolder.target)
-                rfTargetPosition = rfHolder.target.position;
+            rfTargetPosition = CreateIKPos(p, AvatarIKGoal.RightFoot);
+             
         }
         public void UpdateTargetPositions(AvatarIKGoal ik,Vector3 targetPosition )
         {
@@ -124,26 +119,45 @@ namespace Climbing
             switch (ik)
             {
                 case AvatarIKGoal.LeftFoot:
-                    IKPositions lfHolder = lfPoint.ReturnIK(AvatarIKGoal.LeftFoot);
-                    retVal = lfHolder.target.transform.position;
+                    retVal = CreateIKPos(lfPoint, AvatarIKGoal.LeftFoot);
                     break;
                 case AvatarIKGoal.RightFoot:
-                    IKPositions rfHolder = rfPoint.ReturnIK(AvatarIKGoal.RightFoot);
-                    retVal = rfHolder.target.transform.position;
+                    retVal = CreateIKPos(rfPoint, AvatarIKGoal.RightFoot);
                     break;
                 case AvatarIKGoal.LeftHand:
-                    IKPositions lhHolder = lhPoint.ReturnIK(AvatarIKGoal.LeftHand);
-                    retVal = lhHolder.target.transform.position;
+                    retVal = CreateIKPos(lhPoint, AvatarIKGoal.LeftHand);
                     break;
                 case AvatarIKGoal.RightHand:
-                    IKPositions rhHolder = rhPoint.ReturnIK(AvatarIKGoal.RightHand);
-                    retVal = rhHolder.target.transform.position;
+                    retVal = CreateIKPos(rhPoint, AvatarIKGoal.RightHand);
                     break;
                 default:
                     break;
             }
             return retVal;
         }
+
+        public Vector3 ReturnIKPosition_OnTargetPoint(Point p,AvatarIKGoal ik)
+        {
+            Vector3 retVal = default(Vector3);
+
+            switch (ik)
+            {
+                case AvatarIKGoal.LeftFoot:
+                    retVal = CreateIKPos(p, AvatarIKGoal.LeftFoot);
+                    break;
+                case AvatarIKGoal.RightFoot:
+                    retVal = CreateIKPos(p, AvatarIKGoal.RightFoot);
+                    break;
+                case AvatarIKGoal.LeftHand:
+                    retVal = CreateIKPos(p, AvatarIKGoal.LeftHand);
+                    break;
+                case AvatarIKGoal.RightHand:
+                    retVal = CreateIKPos(p, AvatarIKGoal.RightHand);
+                    break;
+            }
+            return retVal;
+        }
+
 
         public Point ReturnPointForIK(AvatarIKGoal ik)
         {
@@ -253,23 +267,18 @@ namespace Climbing
         {
             if (lhPoint)
             {
-                IKPositions lhHolder = lhPoint.ReturnIK(AvatarIKGoal.LeftHand);
-
-                if (lhHolder.target)
-                {
-                    lhHelper.transform.position = Vector3.Lerp(lhHelper.transform.position, lhTargetPosition,Time.deltaTime*helperSpeed);
-                }
-                UpdateIK(AvatarIKGoal.LeftHand, lhHolder, lhHelper, lh, AvatarIKHint.LeftElbow);//leftelbow
+                IKPositions lhHolder = pointD.GetIKPos(AvatarIKGoal.LeftHand);
+                lhHelper.transform.position = Vector3.Lerp(lhHelper.transform.position, lhTargetPosition,Time.deltaTime*helperSpeed);
+                
+                UpdateIK(AvatarIKGoal.LeftHand, lhHolder, lhHelper, lh, lhPoint);//leftelbow
             }
             if (rhPoint)
             {
-                IKPositions rhHolder = rhPoint.ReturnIK(AvatarIKGoal.RightHand);
+                IKPositions rhHolder = pointD.GetIKPos(AvatarIKGoal.RightHand);
 
-                if (rhHolder.target)
-                {
-                    rhHelper.transform.position = Vector3.Lerp(rhHelper.transform.position, rhTargetPosition, Time.deltaTime * helperSpeed);
-                }
-                UpdateIK(AvatarIKGoal.RightHand, rhHolder, rhHelper, rh, AvatarIKHint.RightElbow);
+                rhHelper.transform.position = Vector3.Lerp(rhHelper.transform.position, rhTargetPosition, Time.deltaTime * helperSpeed);
+                
+                UpdateIK(AvatarIKGoal.RightHand, rhHolder, rhHelper, rh, rhPoint);
 
             }
             if (hips == null)
@@ -277,45 +286,40 @@ namespace Climbing
 
             if (lfPoint)
             {
-                IKPositions lfHolder = lfPoint.ReturnIK(AvatarIKGoal.LeftFoot);
+                IKPositions lfHolder = pointD.GetIKPos(AvatarIKGoal.LeftFoot);
+                Vector3 targetPosition = lfTargetPosition;
 
-                if (lfHolder.target)
+                if (forceFeetHeight)
                 {
-                    Vector3 targetPosition = lfTargetPosition;
-
-                    if (forceFeetHeight)
+                    if (targetPosition.y > hips.transform.position.y)
                     {
-                        if (targetPosition.y > hips.transform.position.y)
-                        {
-                            targetPosition.y = targetPosition.y - 0.2f;
-                        }
+                        targetPosition.y = targetPosition.y - 0.2f;
                     }
-                    lfHelper.transform.position = Vector3.Lerp(lfHelper.transform.position, targetPosition, Time.deltaTime * helperSpeed);
                 }
-                UpdateIK(AvatarIKGoal.LeftFoot, lfHolder, lfHelper, lf, AvatarIKHint.LeftKnee);
+                lfHelper.transform.position = Vector3.Lerp(lfHelper.transform.position, targetPosition, Time.deltaTime * helperSpeed);
+               
+                UpdateIK(AvatarIKGoal.LeftFoot, lfHolder, lfHelper, lf, lfPoint);
             }
             if (rfPoint)
             {
-                IKPositions rfHolder = rfPoint.ReturnIK(AvatarIKGoal.RightFoot);
+                IKPositions rfHolder = pointD.GetIKPos(AvatarIKGoal.RightFoot);
 
-                if (rfHolder.target)
+                Vector3 targetPosition = rfTargetPosition;
+
+                if (forceFeetHeight)
                 {
-                    Vector3 targetPosition = rfTargetPosition;
-
-                    if (forceFeetHeight)
+                    if (targetPosition.y > hips.transform.position.y)
                     {
-                        if (targetPosition.y > hips.transform.position.y)
-                        {
-                            targetPosition.y = targetPosition.y - 0.2f;
-                        }
+                        targetPosition.y = targetPosition.y - 0.2f;
                     }
-                    rfHelper.transform.position = Vector3.Lerp(rfHelper.transform.position, targetPosition, Time.deltaTime * helperSpeed);
                 }
-                UpdateIK(AvatarIKGoal.RightFoot, rfHolder, rfHelper, rf, AvatarIKHint.RightKnee);
+                rfHelper.transform.position = Vector3.Lerp(rfHelper.transform.position, targetPosition, Time.deltaTime * helperSpeed);
+                
+                UpdateIK(AvatarIKGoal.RightFoot, rfHolder, rfHelper, rf, rfPoint);
             }
         }
 
-        private void UpdateIK(AvatarIKGoal ik, IKPositions holder, Transform helper, float weight, AvatarIKHint h)
+        private void UpdateIK(AvatarIKGoal ik, IKPositions holder, Transform helper, float weight, Point tP)
         {
             if (holder != null)
             {
@@ -344,13 +348,14 @@ namespace Climbing
                 }
                 else
                 {
-                    helper.rotation = holder.target.transform.rotation;
+                    helper.rotation = transform.rotation;
                 }
 
-                if (holder.hint != null)
+                if (holder.hasHint)
                 {
-                    anim.SetIKHintPositionWeight(h, weight);
-                    anim.SetIKHintPosition(h, holder.hint.position);
+                    anim.SetIKHintPositionWeight(holder.ikHint, weight);
+                    Vector3 hintPos = toWP(tP, holder.hintPos);
+                    anim.SetIKHintPosition(holder.ikHint, hintPos);
                 }
                 
             }
@@ -375,7 +380,25 @@ namespace Climbing
             }
         }
 
+        public Vector3 GetHipPos(Point p)
+        {
+            Vector3 hip = pointD.GetHip(p.pointType).hipPos;
+            Vector3 targetP = p.transform.TransformPoint(hip);
+            return targetP;
+        }
+        public Vector3 toWP(Point tp,Vector3 lp)
+        {
+            return tp.transform.TransformPoint(lp);
+        }
+        
+        public Vector3 CreateIKPos(Point tp,AvatarIKGoal ikGoal)
+        {
+            Vector3 r = Vector3.zero;
+            IKPositions ikPos = pointD.GetIKPos(ikGoal);
+            r = toWP(tp, ikPos.ikPos);
 
+            return r;
+        }
     }
     
 }

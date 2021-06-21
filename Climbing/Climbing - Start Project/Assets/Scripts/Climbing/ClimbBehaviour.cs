@@ -150,6 +150,7 @@ namespace Climbing
                 if (initClimb)
                 {
                     transform.parent = null;
+                    anim.SetBool("Climbing", false);
                     initClimb = false;
                 }
 
@@ -182,7 +183,7 @@ namespace Climbing
 
                         Point closestPoint = tm.ReturnClosest(transform.position);
 
-                        float distanceToPoint = Vector3.Distance(transform.position, closestPoint.transform.parent.position);
+                        float distanceToPoint = Vector3.Distance(transform.position, closestPoint.transform.position);
 
                         if (distanceToPoint < 5)
                         {
@@ -190,7 +191,7 @@ namespace Climbing
                             {
                                 curManager = tm;
                                 targetPoint = closestPoint;
-                                targetPosition = closestPoint.transform.position;
+                                targetPosition = ik.GetHipPos(closestPoint);
                                 curPoint = closestPoint;
                                 climbing = true;
                                 lockInput = true;
@@ -299,7 +300,7 @@ namespace Climbing
                 if (targetPoint == from)
                     continue;
 
-                Vector3 relativePosition = from.transform.parent.InverseTransformPoint(targetPoint.transform.parent.position);
+                Vector3 relativePosition = from.transform.InverseTransformPoint(targetPoint.transform.position);
 
                 if (IsDirectionValid(targetDirection, relativePosition))
                 {
@@ -429,7 +430,7 @@ namespace Climbing
 
                 if (!forward)
                 {
-                    Vector3 disOrigin = worldP + (transform.forward + Vector3.up * 2);
+                    Vector3 disOrigin = worldP + (transform.forward*0.5f + Vector3.up * 2);
                     RaycastHit hit;
 
                     Debug.DrawRay(disOrigin, -Vector3.up * 2, Color.green);
@@ -437,7 +438,7 @@ namespace Climbing
                     if(Physics.Raycast(disOrigin,-Vector3.up,out hit, 2))
                     {
                         Vector3 gp = hit.point;
-                        gp.y += 0.04f + Mathf.Abs(dismountNeighbour.target.transform.localPosition.y);
+                        gp.y += 0.04f;
 
                         dismountPointGO.transform.position = gp;
                         dismountPointGO.transform.rotation = transform.rotation;
@@ -771,7 +772,7 @@ namespace Climbing
 
             if (n.target)
             {
-                float distance = Vector3.Distance(curPoint.transform.parent.position, n.target.transform.parent.position);
+                float distance = Vector3.Distance(curPoint.transform.position, n.target.transform.position);
 
                 if (distance < minDistance)
                 {
@@ -977,7 +978,7 @@ namespace Climbing
                     }
                 }
 
-                transform.parent = curPoint.transform.parent;
+                transform.parent = curPoint.transform;
 
                 if (climbState == ClimbStates.onPoint)
                 {
@@ -1612,7 +1613,7 @@ namespace Climbing
         private void UpdateIKTarget(int posIndex, AvatarIKGoal _ikGoal, Point tp)
         {
             _ikStartPos[posIndex] = ik.ReturnCurrentPointPosition(_ikGoal);
-            _ikTargetPos[posIndex] = tp.ReturnIK(_ikGoal).target.transform.position;
+            _ikTargetPos[posIndex] = ik.ReturnIKPosition_OnTargetPoint(tp, _ikGoal);
             ik.UpdatePoint(_ikGoal, tp);
         }
 
@@ -1638,18 +1639,18 @@ namespace Climbing
         #region Others
         private void BetweenPoints(Vector3 inD)
         {
-            Neighbour n = ReturnNeighbour(inD, curPoint, curManager);
+            //Neighbour n = ReturnNeighbour(inD, curPoint, curManager);
 
-            if (n != null)
-            {
-                if (inD == n.direction)
-                    targetPoint = prevPoint;
-            }
-            else
-            {
-                targetPoint = curPoint;
-            }
-            targetPosition = targetPoint.transform.position;
+            //if (n != null)
+            //{
+            //    if (inD == n.direction)
+            //        targetPoint = prevPoint;
+            //}
+            //else
+            //{
+            //    targetPoint = curPoint;
+            //}
+            targetPosition = ik.GetHipPos(targetPoint);
             climbState = ClimbStates.inTransit;
             targetState = ClimbStates.onPoint;
             prevPoint = curPoint;
@@ -1763,8 +1764,8 @@ namespace Climbing
 
                         if (n.target != null)
                         {
-                            float dis = Vector2.Distance(curPoint.transform.parent.position,
-                                n.target.transform.parent.position);
+                            float dis = Vector2.Distance(curPoint.transform.position,
+                                n.target.transform.position);
                             if (dis > directThreshold)
                             {
                                 n.target = null;
@@ -1782,8 +1783,8 @@ namespace Climbing
                         print(targetManager);
                         if (n.target != null)
                         {
-                            float dis = Vector2.Distance(curPoint.transform.parent.position, 
-                                n.target.transform.parent.position);
+                            float dis = Vector2.Distance(curPoint.transform.position, 
+                                n.target.transform.position);
                             if (dis > directThreshold)
                             {
                                 n.target = null;
@@ -1864,7 +1865,7 @@ namespace Climbing
 
                         if (n.target != null)
                         {
-                            float dis = Vector2.Distance(curPoint.transform.parent.position, n.target.transform.parent.position);
+                            float dis = Vector2.Distance(curPoint.transform.position, n.target.transform.position);
                             if (dis > directThreshold)
                             {
                                 n.target = null;
@@ -1881,7 +1882,7 @@ namespace Climbing
                         n.cType = ConnectionType.corner_out;
                         if (n.target != null)
                         {
-                            float dis = Vector2.Distance(curPoint.transform.parent.position, n.target.transform.parent.position);
+                            float dis = Vector2.Distance(curPoint.transform.position, n.target.transform.position);
                             if (dis > directThreshold)
                             {
                                 n.target = null;
@@ -1916,14 +1917,14 @@ namespace Climbing
             {
                 case ConnectionType.inBetween:
                     float distance = Vector3.Distance(curPoint.transform.position, targetPoint.transform.position);
-                    desiredPos = curPoint.transform.position + (direction * (distance / 2));
+                    desiredPos = ik.GetHipPos(curPoint) + (direction * (distance / 2));
 
                     targetState = ClimbStates.betweenPoints;
                     TransitDir transitDir = ReturnTransitDirection(inputD, false);
                     PlayAnim(transitDir);
                     break;
                 case ConnectionType.direct:
-                    desiredPos = targetPoint.transform.position;
+                    desiredPos = ik.GetHipPos(targetPoint);
 
                     targetState = ClimbStates.onPoint;
                     TransitDir transitDir2 = ReturnTransitDirection(inputD, true);
@@ -1946,18 +1947,18 @@ namespace Climbing
                 case ConnectionType.jumpBack:
                     break;
                 case ConnectionType.jumpBack_onManager:
-                    desiredPos = targetPoint.transform.position;
+                    desiredPos = ik.GetHipPos(targetPoint);
                     targetState = ClimbStates.onPoint;
                     PlayAnim(TransitDir.j_back, true);
                     break;
                 case ConnectionType.hanging_jump_forward:
-                    desiredPos = targetPoint.transform.position;
+                    desiredPos = ik.GetHipPos(targetPoint);
                     targetState = ClimbStates.onPoint;
                     PlayAnim(TransitDir.h_j_forward, true);
                     break;
                 case ConnectionType.hanging_turn_around:
                     Vector3 mid = ReturnCornerDir(curPoint, targetPoint, 0);
-                    mid += curPoint.transform.right * 0.05f;
+                    mid += ik.GetHipPos(curPoint) * 0.05f;
                     desiredPos = mid;
                     targetState = ClimbStates.betweenPoints;
                     break;
@@ -1995,8 +1996,8 @@ namespace Climbing
 
         private Vector3 ReturnCornerDir(Point cp, Point tp, float multiplier=1)
         {
-            Vector3 cpPos = (-cp.transform.forward * multiplier) + cp.transform.position;
-            Vector3 tpPos = (-tp.transform.forward * multiplier) + tp.transform.position;
+            Vector3 cpPos = (-cp.transform.forward * multiplier) + ik.GetHipPos(cp);
+            Vector3 tpPos = (-tp.transform.forward * multiplier) + ik.GetHipPos(tp);
             Vector3 direction = tpPos - cpPos;
             float distance = Vector3.Distance(cpPos, tpPos);
             Vector3 wp = cpPos + (direction * (distance / 2));
@@ -2047,7 +2048,7 @@ namespace Climbing
                     }
 
                     float distanceToPoint = Vector3.Distance(transform.position,
-                        closestPoint.transform.parent.position);
+                        closestPoint.transform.position);
                     //print(distanceToPoint);
                     if (distanceToPoint <5 )
                     {
@@ -2055,7 +2056,7 @@ namespace Climbing
                         targetPoint = closestPoint;
                         FixHipPositions(targetPoint);
 
-                        targetPosition = closestPoint.transform.position;
+                        targetPosition =ik.GetHipPos(closestPoint);
                         curPoint = closestPoint;
                         climbing = true;
                         lockInput = true;
