@@ -17,7 +17,7 @@ namespace Climbing
         {
             IKPositions retVal = null;
 
-            for(int i = 0; i < iks.Count; i++)
+            for (int i = 0; i < iks.Count; i++)
             {
                 if (iks[i].ik == goal)
                 {
@@ -32,7 +32,7 @@ namespace Climbing
         {
             Neighbour retVal = null;
 
-            for(int i = 0; i < neighbours.Count; i++)
+            for (int i = 0; i < neighbours.Count; i++)
             {
                 if (neighbours[i].target == target)
                 {
@@ -47,7 +47,7 @@ namespace Climbing
         {
             Neighbour retval = null;
 
-            for(int i = 0; i < neighbours.Count; i++)
+            for (int i = 0; i < neighbours.Count; i++)
             {
                 if (neighbours[i].direction == dir)
                 {
@@ -64,10 +64,8 @@ namespace Climbing
     public class IKPositions
     {
         public AvatarIKGoal ik;
-        public Vector3 ikPos;
-        public Vector3 hintPos;
-        public AvatarIKHint ikHint;
-        public bool hasHint;
+        public Transform target;
+        public Transform hint;
     }
     [System.Serializable]
     public class Neighbour

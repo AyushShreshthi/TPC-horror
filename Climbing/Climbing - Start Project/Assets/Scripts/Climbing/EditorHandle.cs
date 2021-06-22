@@ -6,7 +6,7 @@ using UnityEditor;
 namespace Climbing
 {
     [CustomEditor(typeof(DrawWireCube))]
-    public class DrawWireCubeEditor:Editor
+    public class DrawWireCubeEditor : Editor
     {
         void OnSceneGUI()
         {
@@ -16,9 +16,9 @@ namespace Climbing
             {
                 t.ikPos = t.transform.GetComponent<Point>().iks;
             }
-            for(int i = 0; i < t.ikPos.Count; i++)
+            for (int i = 0; i < t.ikPos.Count; i++)
             {
-                if (t.ikPos[i].ik != null)
+                if (t.ikPos[i].target != null)
                 {
                     Color targetColor = Color.red;
 
@@ -41,11 +41,11 @@ namespace Climbing
                     }
                     Handles.color = targetColor;
 
-                    //Handles.CubeCap(0, t.ikPos[i].ikPos, t.ikPos[i].ikPos, 0.05f);
+                    Handles.CubeCap(0, t.ikPos[i].target.position, t.ikPos[i].target.rotation, 0.05f);
 
-                    if (t.ikPos[i].ikHint != null)
+                    if (t.ikPos[i].hint != null)
                     {
-                       // Handles.CubeCap(0, t.ikPos[i].ikHint.position, t.ikPos[i].ikHint.rotation, 0.05f);
+                        Handles.CubeCap(0, t.ikPos[i].hint.position, t.ikPos[i].hint.rotation, 0.05f);
 
                     }
                 }
@@ -133,7 +133,7 @@ namespace Climbing
             {
                 t.ConnectedPoints.AddRange(t.transform.GetComponent<Point>().neighbours);
             }
-            for(int i = 0; i < t.ConnectedPoints.Count; i++)
+            for (int i = 0; i < t.ConnectedPoints.Count; i++)
             {
                 if (t.ConnectedPoints[i].target == null)
                 {

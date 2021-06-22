@@ -61,5 +61,11 @@ namespace Controller
 
             pivot.localRotation = Quaternion.Euler(tiltAngle, 0, 0);
         }
+        public static CameraHandle singleton;
+        private void Awake()
+        {
+            singleton = this;
+        }
     }
+   
 }

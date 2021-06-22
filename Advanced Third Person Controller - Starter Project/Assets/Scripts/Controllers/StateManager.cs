@@ -258,7 +258,7 @@ namespace TPC
                         }
                         else
                         {
-                            bool willClimb = false;
+                            /*bool willClimb = false;
                             ClimbOver(hit, ref willClimb,ClimbCheckType.walk_up);
                             if (!willClimb)
                             {
@@ -273,7 +273,7 @@ namespace TPC
                             {
                                 obstacleForward = true;
                                 return;
-                            }
+                            }*/
                         }
                     }
                 }
@@ -294,7 +294,6 @@ namespace TPC
                 {
                     targetIncline = (groundAngle < 0) ? 1 : -1;
                 }
-
                 if (groundAngle == 0)
                 {
                     targetIncline = 0;
