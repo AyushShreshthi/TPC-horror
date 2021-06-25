@@ -97,6 +97,8 @@ namespace TPC
         public Rigidbody rBody;
         [HideInInspector]
         public Collider controllerCollider;
+        [HideInInspector]
+        public Climbing.ClimbBehaviour climbB;
         bool quadratic;
 
         public Vector3 offsetBack = new Vector3(0, 0, -0.3f);
@@ -258,9 +260,9 @@ namespace TPC
                         }
                         else
                         {
-                            /*bool willClimb = false;
+                            bool willClimb = false;
                             ClimbOver(hit, ref willClimb,ClimbCheckType.walk_up);
-                            if (!willClimb)
+                            /*if (!willClimb)
                             {
                                 ClimbOver(hit, ref willClimb, ClimbCheckType.climb_up);
                                 if (willClimb)
@@ -268,12 +270,12 @@ namespace TPC
                                     obstacleForward = true;
                                     return;
                                 }
-                            }
+                            }*/
                             if (!willClimb)
                             {
                                 obstacleForward = true;
                                 return;
-                            }*/
+                            }
                         }
                     }
                 }
@@ -607,6 +609,8 @@ namespace TPC
             {
                 Debug.Log("No Collider found for the controller !!! ");
             }
+
+            climbB = GetComponent<Climbing.ClimbBehaviour>();
         }
 
         internal void LegFront()

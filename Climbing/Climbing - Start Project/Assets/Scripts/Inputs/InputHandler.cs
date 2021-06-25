@@ -81,8 +81,16 @@ namespace TPC
 
             states.onLocomotion = states.anim.GetBool(Statics.onLocomotion);
             HandleRun();
+            bool jInput = Input.GetButton(Statics.Jump);
 
-            states.jumpInput = Input.GetButton(Statics.Jump);
+            if (jInput)
+            {
+                states.climbB.LookForClimbSpot();
+                if (states.climbB.climbing)
+                    jInput = false;
+            }
+
+            states.jumpInput = jInput;
         }
         bool InAngle(Vector3 targetDir,float angleThreshold)
         {

@@ -153,10 +153,10 @@ namespace Climbing
                     initClimb = false;
                 }
 
-                if (Input.GetKey(KeyCode.Space))
-                {
-                    LookForClimbSpot();
-                }
+                //if (Input.GetKey(KeyCode.Space))
+                //{
+                //    LookForClimbSpot();
+                //}
                 CharacterOnEdge();
             }
         }
@@ -2020,7 +2020,7 @@ namespace Climbing
             return retVal;
         }
 
-        private void LookForClimbSpot()
+        public void LookForClimbSpot()
         {
             Vector3 origin = transform.position + Vector3.up;
             Vector3 direction = transform.forward;
