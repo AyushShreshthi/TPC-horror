@@ -331,7 +331,7 @@ namespace TPC
             Debug.DrawRay(climbCheckOrigin, wallDirection, Color.yellow);
             if(Physics.Raycast(climbCheckOrigin,wallDirection,out climbHit, 1.2f, ignoreLayers))
             {
-                print("it's a wall");
+
             }
             else
             {

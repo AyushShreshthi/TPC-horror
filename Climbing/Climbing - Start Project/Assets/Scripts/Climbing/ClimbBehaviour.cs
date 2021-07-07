@@ -1680,7 +1680,7 @@ namespace Climbing
             {
                 if (neighbour.target == null)
                     return;
-
+                
                 FixHipPositions(neighbour.target);
 
                 targetPoint = neighbour.target;
@@ -2046,12 +2046,13 @@ namespace Climbing
                         closestPoint = null;
                         return;
                     }
-
+                    //print(angle);
                     float distanceToPoint = Vector3.Distance(transform.position,
                         closestPoint.transform.parent.position);
-                    //print(distanceToPoint);
-                    if (distanceToPoint < 5)
+
+                    if (distanceToPoint < 5 && distanceToPoint>3 )
                     {
+                        
                         curManager = tm;
                         targetPoint = closestPoint;
                         FixHipPositions(targetPoint);
