@@ -37,6 +37,11 @@ namespace TPC
         public bool aiming;
         public bool inCover;
         public bool reloading;
+        public bool shoot;
+        public bool actualShooting;
+        public Vector3 lookHitPosition;
+        public Weapon_Manager weaponManager;
+        public int weaponAnimType;
 
         #region StateRequests
         [Header("State Requests")]
@@ -50,7 +55,6 @@ namespace TPC
         public bool canJump;
         public bool canVault = true;  // if we dont want player to jump make it false
         #endregion
-
 
         #region Variables
         [HideInInspector]
@@ -83,7 +87,7 @@ namespace TPC
 
         #endregion
 
-        LayerMask ignoreLayers;
+        public LayerMask ignoreLayers;
         public enum CharStates
         {
             idle, moving, onAir, hold, vaulting
@@ -596,6 +600,7 @@ namespace TPC
         public void Init()
         {
             inGame = true;
+            weaponManager = GetComponent<Weapon_Manager>();
             CreateModel();
             SetupAnimator();
             AddControllerReferences();
@@ -660,6 +665,14 @@ namespace TPC
             curState = CharStates.hold;
             rBody.isKinematic = true;
             controllerCollider.isTrigger = true;
+        }
+
+        public void StartReload()
+        {
+            if (!reloading)
+            {
+                anim.SetTrigger("Reload");
+            }
         }
     }
 

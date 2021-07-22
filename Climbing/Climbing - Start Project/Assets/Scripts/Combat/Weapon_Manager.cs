@@ -57,19 +57,19 @@ namespace TPC
             }
 
             //test   update with input handler(dangerous for enemy)
-            //if (Input.GetKeyDown(KeyCode.H))
-            //{
-            //    if (!states.meleeWeapon)
-            //    {
-            //        SwitchWeaponWithTargetWeapon(unarmed);
-            //        states.meleeWeapon = true;
-            //    }
-            //    else
-            //    {
-            //        SwitchWeaponWithTargetWeapon(AvailableWeapons[weaponIndex]);
-            //        states.meleeWeapon = false;
-            //    }
-            //}
+            if (Input.GetKeyDown(KeyCode.H))
+            {
+                if (!states.meleeWeapon)
+                {
+                    SwitchWeaponWithTargetWeapon(unarmed);
+                    states.meleeWeapon = true;
+                }
+                else
+                {
+                    SwitchWeaponWithTargetWeapon(AvailableWeapons[weaponIndex]);
+                    states.meleeWeapon = false;
+                }
+            }
 
             foreach (WeaponReferenceBase w in Weapons)
             {
@@ -199,8 +199,8 @@ namespace TPC
                 newWeapon.ikHolder.SetActive(true);
             }
 
-            //states.weaponAnimType = newWeapon.animType;
-            //states.meleeWeapon = newWeapon.meleeWeapon;
+            states.weaponAnimType = newWeapon.animType;
+            states.meleeWeapon = newWeapon.meleeWeapon;
 
             currentWeapon = newWeapon;      //test
         }
@@ -208,8 +208,8 @@ namespace TPC
         {
             for (int i = 0; i < Weapons.Count; i++)
             {
-                //ParticleSystem[] muzzleParticles = Weapons[i].weaponModel.GetComponentsInChildren<ParticleSystem>();
-                //Weapons[i].muzzle = muzzleParticles;
+                ParticleSystem[] muzzleParticles = Weapons[i].weaponModel.GetComponentsInChildren<ParticleSystem>();
+                Weapons[i].muzzle = muzzleParticles;
                 if (Weapons[i].weaponModel)
                 {
                     Weapons[i].weaponModel.SetActive(false);

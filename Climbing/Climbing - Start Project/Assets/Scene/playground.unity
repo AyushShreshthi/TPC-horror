@@ -11638,6 +11638,8 @@ GameObject:
   - component: {fileID: 6632838409008461028}
   - component: {fileID: 360533782}
   - component: {fileID: 360533783}
+  - component: {fileID: 360533785}
+  - component: {fileID: 360533784}
   m_Layer: 9
   m_Name: Character Controller
   m_TagString: Untagged
@@ -11675,6 +11677,98 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3045122d656997a46bf3220a21492643, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &360533784
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 360533781}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8c465e47da0af4046a7a47167c4d0d8b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  weaponAnim: {fileID: 0}
+  modelAnim: {fileID: 0}
+  fireRate: 0
+  bulletSpawnPoint: {fileID: 0}
+  smokeParticle: {fileID: 0}
+  muzzle: []
+  casingPrefab: {fileID: 2818493339161000242, guid: cba271a952d57e74d9f9a81b385499e2,
+    type: 3}
+  caseSpawn: {fileID: 0}
+  magazineBullets: 0
+  curBullets: 30
+  carryingAmmo: 0
+--- !u!114 &360533785
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 360533781}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3dc23f9d25dea7c48b471eb6c3f4e612, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxWeapons: 2
+  AvailableWeapons: []
+  weaponIndex: 0
+  Weapons: []
+  states: {fileID: 0}
+  unarmed:
+    weaponID: unarmed
+    weaponModel: {fileID: 0}
+    modelAnimator: {fileID: 0}
+    ikHolder: {fileID: 0}
+    rightHandTarget: {fileID: 0}
+    leftHandTarget: {fileID: 0}
+    lookTarget: {fileID: 0}
+    muzzle: []
+    bulletSpawner: {fileID: 0}
+    casingSpawner: {fileID: 0}
+    weaponStats:
+      curBullets: 0
+      maxBullets: 0
+      fireRate: 0
+      shootSound: {fileID: 0}
+    rightElbowTarget: {fileID: 0}
+    leftElbowTarget: {fileID: 0}
+    animType: 0
+    dis_LHIK_notAiming: 0
+    carryingAmmo: 60
+    maxAmmo: 60
+    pickablePrefab: {fileID: 0}
+    holsterWeapon: {fileID: 0}
+    meleeWeapon: 0
+  downWeapon:
+    weaponID: 
+    weaponModel: {fileID: 0}
+    modelAnimator: {fileID: 0}
+    ikHolder: {fileID: 0}
+    rightHandTarget: {fileID: 0}
+    leftHandTarget: {fileID: 0}
+    lookTarget: {fileID: 0}
+    muzzle: []
+    bulletSpawner: {fileID: 0}
+    casingSpawner: {fileID: 0}
+    weaponStats:
+      curBullets: 0
+      maxBullets: 0
+      fireRate: 0
+      shootSound: {fileID: 0}
+    rightElbowTarget: {fileID: 0}
+    leftElbowTarget: {fileID: 0}
+    animType: 0
+    dis_LHIK_notAiming: 0
+    carryingAmmo: 60
+    maxAmmo: 60
+    pickablePrefab: {fileID: 0}
+    holsterWeapon: {fileID: 0}
+    meleeWeapon: 0
+  startUnarmed: 1
 --- !u!136 &364061103
 CapsuleCollider:
   m_ObjectHideFlags: 0
@@ -11774,6 +11868,11 @@ MonoBehaviour:
   aiming: 0
   inCover: 0
   reloading: 0
+  shoot: 0
+  actualShooting: 0
+  lookHitPosition: {x: 0, y: 0, z: 0}
+  weaponManager: {fileID: 0}
+  weaponAnimType: 0
   curState: 0
   onGround: 0
   run: 0
@@ -11793,9 +11892,13 @@ MonoBehaviour:
   vaultOverHeight: 0
   vaultFloorHeightDifference: 0
   curVaultType: 0
+  ignoreLayers:
+    serializedVersion: 2
+    m_Bits: 0
   anim: {fileID: 0}
   rBody: {fileID: 0}
   controllerCollider: {fileID: 0}
+  climbB: {fileID: 0}
   offsetBack: {x: 0, y: 0, z: -0.3}
   offsetFront: {x: 0, y: 0, z: 0.3}
 --- !u!1 &367682874

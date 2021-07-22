@@ -3,10 +3,11 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Xml.Serialization;
 using UnityEngine;
+using TPC;
 
 public class Handle_Shooting : MonoBehaviour
 {
-    StateManagerShoot states;
+    StateManager states;
 
     [HideInInspector]
     public Animator weaponAnim;
@@ -47,7 +48,7 @@ public class Handle_Shooting : MonoBehaviour
     }
     public void Start()
     {
-        states = GetComponent<StateManagerShoot>();
+        states = GetComponent<StateManager>();
     }
 
     bool shoot;
@@ -93,7 +94,7 @@ public class Handle_Shooting : MonoBehaviour
                 if (curBullets > 0)
                 {
                     emptyGun = false;
-                    states.audioManager.PlayGunSound();
+                    //states.audioManager.PlayGunSound();
 
                     if (modelAnim != null)
                     {
@@ -124,7 +125,7 @@ public class Handle_Shooting : MonoBehaviour
                     {
                         if (carryingAmmo > 0)
                         {
-                            states.handleAnimations.StartReload();
+                            states.StartReload();
 
                             int targetBullets = 0;
 
@@ -147,12 +148,12 @@ public class Handle_Shooting : MonoBehaviour
                         }
                         else
                         {
-                            states.audioManager.PlayEffect("empty_gun");
+                            //states.audioManager.PlayEffect("empty_gun");
                         }
                     }
                     else
                     {
-                        states.audioManager.PlayEffect("empty_gun");
+                        //states.audioManager.PlayEffect("empty_gun");
                         emptyGun = true;
                     }
                 }
@@ -165,15 +166,15 @@ public class Handle_Shooting : MonoBehaviour
 
                 weaponAnim.SetBool("Shoot", false);
 
-                timer -= states.myDelta;
+                //timer -= states.myDelta;
             }
         }
         else
         {
-            if (timer > 0)
-                timer -= states.myDelta;
-            else
-                timer = 0;
+            //if (timer > 0)
+            //   // timer -= states.myDelta;
+            //else
+            //    timer = 0;
 
 
             weaponAnim.SetBool("Shoot", false);
@@ -187,7 +188,7 @@ public class Handle_Shooting : MonoBehaviour
          Vector3 direction = states.lookHitPosition - bulletSpawnPoint.position;  
         RaycastHit hit;
 
-        if (Physics.Raycast(bulletSpawnPoint.position, direction, out hit, 100, states.layerMask))
+        if (Physics.Raycast(bulletSpawnPoint.position, direction, out hit, 100, states.ignoreLayers))
         {
 
             GameObject go = Instantiate(smokeParticle, hit.point, Quaternion.identity) as GameObject;
@@ -215,12 +216,6 @@ public class Handle_Shooting : MonoBehaviour
 
             }
              
-
-            
-            //if (hit.transform.GetComponent<ShootingRangeTarget>())
-            //{
-            //    hit.transform.GetComponent<ShootingRangetarget>().HitTarget();
-            //}
         }
     }
 }
